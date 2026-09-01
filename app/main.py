@@ -89,17 +89,17 @@ class ConnectionTestRequest(BaseModel):
 # --- HTML Web Routes ---
 @app.get("/", response_class=HTMLResponse)
 async def dashboard_page(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "app_name": settings.APP_NAME})
+    return templates.TemplateResponse(request=request, name="index.html", context={"app_name": settings.APP_NAME})
 
 
 @app.get("/accounts", response_class=HTMLResponse)
 async def accounts_page(request: Request):
-    return templates.TemplateResponse("accounts.html", {"request": request, "app_name": settings.APP_NAME})
+    return templates.TemplateResponse(request=request, name="accounts.html", context={"app_name": settings.APP_NAME})
 
 
 @app.get("/logs", response_class=HTMLResponse)
 async def logs_page(request: Request):
-    return templates.TemplateResponse("logs.html", {"request": request, "app_name": settings.APP_NAME})
+    return templates.TemplateResponse(request=request, name="logs.html", context={"app_name": settings.APP_NAME})
 
 
 # --- API Routes ---
