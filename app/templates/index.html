@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - {{ app_name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+
+    <!-- Navigation Header -->
+    <nav class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="bg-indigo-600 text-white p-2 rounded-lg font-bold text-xl">
+                <i class="fa-solid me-1 fa-fire-flame-curved"></i> IP Warmup
+            </div>
+            <span class="text-xl font-semibold tracking-wide text-slate-200">{{ app_name }}</span>
+        </div>
+        <div class="flex space-x-6">
+            <a href="/" class="text-indigo-400 font-medium hover:text-indigo-300 flex items-center gap-2">
+                <i class="fa-solid fa-chart-line"></i> Dashboard
+            </a>
+            <a href="/accounts" class="text-slate-400 font-medium hover:text-indigo-300 flex items-center gap-2">
+                <i class="fa-solid fa-inbox"></i> Seed Accounts
+            </a>
+            <a href="/logs" class="text-slate-400 font-medium hover:text-indigo-300 flex items-center gap-2">
+                <i class="fa-solid fa-list-check"></i> Warmup Logs
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="p-6 max-w-7xl mx-auto space-y-6">
+        
+        <!-- Control Header & Worker Status Bar -->
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-lg">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="relative flex h-3.5 w-3.5">
+                      <span id="status-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span id="status-dot" class="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
+                    </span>
+                    <span id="worker-status-text" class="font-semibold text-emerald-400 text-lg">Worker Active</span>
+                </div>
+                <span class="text-slate-500">|</span>
+                <span class="text-slate-400 text-sm">Interval: <strong id="worker-interval" class="text-slate-200">30s</strong></span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="triggerImmediateRun()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-2 transition">
+                    <i class="fa-solid fa-bolt"></i> Run Warmup Cycle Now
+                </button>
+                <button id="toggle-worker-btn" onclick="toggleWorker()" class="bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-2 transition">
+                    <i class="fa-solid fa-pause"></i> Pause Worker
+                </button>
+            </div>
+        </div>
+
+        <!-- Metric Stat Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                <div class="flex justify-between items-center text-slate-400 text-sm font-medium mb-2">
+                    <span>Active Seed Inboxes</span>
+                    <i class="fa-solid fa-envelope-open-text text-indigo-400"></i>
+                </div>
+                <div id="stat-accounts" class="text-3xl font-bold text-white">0</div>
+            </div>
+
+            <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                <div class="flex justify-between items-center text-slate-400 text-sm font-medium mb-2">
+                    <span>Emails Opened / Read</span>
+                    <i class="fa-solid fa-eye text-emerald-400"></i>
+                </div>
+                <div id="stat-opened" class="text-3xl font-bold text-emerald-400">0</div>
+            </div>
+
+            <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                <div class="flex justify-between items-center text-slate-400 text-sm font-medium mb-2">
+                    <span>CTA Links Clicked</span>
+                    <i class="fa-solid fa-hand-pointer text-cyan-400"></i>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <div id="stat-clicked" class="text-3xl font-bold text-cyan-400">0</div>
+                    <span id="stat-click-rate" class="text-xs text-cyan-300 font-semibold">(0%)</span>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                <div class="flex justify-between items-center text-slate-400 text-sm font-medium mb-2">
+                    <span>Replies Dispatched</span>
+                    <i class="fa-solid fa-reply text-purple-400"></i>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <div id="stat-replied" class="text-3xl font-bold text-purple-400">0</div>
+                    <span id="stat-reply-rate" class="text-xs text-purple-300 font-semibold">(0%)</span>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                <div class="flex justify-between items-center text-slate-400 text-sm font-medium mb-2">
+                    <span>Spam Rescued</span>
+                    <i class="fa-solid fa-shield-cat text-amber-400"></i>
+                </div>
+                <div id="stat-spam" class="text-3xl font-bold text-amber-400">0</div>
+            </div>
+        </div>
+
+        <!-- Charts & Activity Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Warmup Performance Chart (2 Columns) -->
+            <div class="lg:col-span-2 bg-slate-800 border border-slate-700 p-5 rounded-xl space-y-4">
+                <h3 class="text-lg font-semibold text-slate-200 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-area text-indigo-400"></i> Warmup Signals Trend (14 Days)
+                </h3>
+                <div class="h-72">
+                    <canvas id="warmupChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Live Activity Log Stream (1 Column) -->
+            <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl flex flex-col space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-stream text-emerald-400"></i> Live Activity Stream
+                    </h3>
+                    <a href="/logs" class="text-xs text-indigo-400 hover:underline">View All</a>
+                </div>
+                <div id="live-logs-container" class="flex-1 overflow-y-auto space-y-3 pr-1 max-h-72 text-sm">
+                    <div class="text-slate-500 text-center py-8">Loading logs...</div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        let warmupChart = null;
+        let isWorkerActive = true;
+
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                
+                document.getElementById('stat-accounts').innerText = data.summary.active_accounts + " / " + data.summary.total_accounts;
+                document.getElementById('stat-opened').innerText = data.summary.total_opened;
+                document.getElementById('stat-clicked').innerText = data.summary.total_clicked;
+                document.getElementById('stat-click-rate').innerText = `(${data.summary.click_rate}%)`;
+                document.getElementById('stat-replied').innerText = data.summary.total_replied;
+                document.getElementById('stat-reply-rate').innerText = `(${data.summary.reply_rate}%)`;
+                document.getElementById('stat-spam').innerText = data.summary.total_spam_rescued;
+
+                updateChart(data.charts);
+            } catch (err) {
+                console.error("Error fetching stats:", err);
+            }
+        }
+
+        async function fetchLogs() {
+            try {
+                const res = await fetch('/api/logs?limit=10');
+                const logs = await res.json();
+                const container = document.getElementById('live-logs-container');
+                
+                if (logs.length === 0) {
+                    container.innerHTML = `<div class="text-slate-500 text-center py-8">No warm-up activities logged yet.</div>`;
+                    return;
+                }
+
+                container.innerHTML = logs.map(log => {
+                    let badgeClass = 'bg-slate-700 text-slate-300';
+                    let icon = 'fa-info-circle';
+                    
+                    if (log.action === 'OPEN') { badgeClass = 'bg-emerald-950 text-emerald-300 border border-emerald-800'; icon = 'fa-eye'; }
+                    else if (log.action === 'CLICK') { badgeClass = 'bg-cyan-950 text-cyan-300 border border-cyan-800'; icon = 'fa-hand-pointer'; }
+                    else if (log.action === 'REPLY') { badgeClass = 'bg-purple-950 text-purple-300 border border-purple-800'; icon = 'fa-reply'; }
+                    else if (log.action === 'SPAM_RESCUE') { badgeClass = 'bg-amber-950 text-amber-300 border border-amber-800'; icon = 'fa-shield-cat'; }
+
+                    return `
+                        <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/60 flex flex-col space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="px-2 py-0.5 rounded text-xs font-semibold ${badgeClass} flex items-center gap-1">
+                                    <i class="fa-solid ${icon}"></i> ${log.action}
+                                </span>
+                                <span class="text-xs text-slate-500">${log.created_at}</span>
+                            </div>
+                            <div class="text-slate-200 font-medium truncate">${log.subject || '(No Subject)'}</div>
+                            <div class="text-xs text-slate-400 truncate">${log.details}</div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error("Error fetching logs:", err);
+            }
+        }
+
+        async function fetchWorkerStatus() {
+            try {
+                const res = await fetch('/api/worker/status');
+                const data = await res.json();
+                isWorkerActive = data.is_running;
+                
+                const dot = document.getElementById('status-dot');
+                const ping = document.getElementById('status-ping');
+                const text = document.getElementById('worker-status-text');
+                const btn = document.getElementById('toggle-worker-btn');
+                document.getElementById('worker-interval').innerText = data.poll_interval_seconds + "s";
+
+                if (isWorkerActive) {
+                    dot.className = "relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500";
+                    ping.style.display = "block";
+                    text.innerText = "Worker Active";
+                    text.className = "font-semibold text-emerald-400 text-lg";
+                    btn.innerHTML = `<i class="fa-solid fa-pause"></i> Pause Worker`;
+                    btn.className = "bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-2 transition";
+                } else {
+                    dot.className = "relative inline-flex rounded-full h-3.5 w-3.5 bg-amber-500";
+                    ping.style.display = "none";
+                    text.innerText = "Worker Paused";
+                    text.className = "font-semibold text-amber-400 text-lg";
+                    btn.innerHTML = `<i class="fa-solid fa-play"></i> Start Worker`;
+                    btn.className = "bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-2 transition";
+                }
+            } catch (err) {
+                console.error("Error fetching worker status:", err);
+            }
+        }
+
+        async function toggleWorker() {
+            const endpoint = isWorkerActive ? '/api/worker/stop' : '/api/worker/start';
+            await fetch(endpoint, { method: 'POST' });
+            await fetchWorkerStatus();
+        }
+
+        async function triggerImmediateRun() {
+            await fetch('/api/worker/trigger', { method: 'POST' });
+            alert("Warmup cycle initiated! Check logs in a few seconds.");
+            setTimeout(() => { fetchStats(); fetchLogs(); }, 3000);
+        }
+
+        function updateChart(charts) {
+            const ctx = document.getElementById('warmupChart').getContext('2d');
+            if (warmupChart) {
+                warmupChart.destroy();
+            }
+
+            warmupChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: charts.labels.length > 0 ? charts.labels : ['Today'],
+                    datasets: [
+                        { label: 'Opened', data: charts.opened, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.3 },
+                        { label: 'Clicked CTA', data: charts.clicked, borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,0.1)', fill: true, tension: 0.3 },
+                        { label: 'Replied', data: charts.replied, borderColor: '#a855f7', backgroundColor: 'rgba(168,85,247,0.1)', fill: true, tension: 0.3 },
+                        { label: 'Spam Rescued', data: charts.spam_rescued, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', fill: true, tension: 0.3 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#94a3b8' } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#64748b' }, grid: { color: '#334155' } },
+                        y: { ticks: { color: '#64748b' }, grid: { color: '#334155' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Initialize dashboard and poll every 5 seconds
+        fetchStats();
+        fetchLogs();
+        fetchWorkerStatus();
+        setInterval(() => {
+            fetchStats();
+            fetchLogs();
+            fetchWorkerStatus();
+        }, 5000);
+    </script>
+</body>
+</html>

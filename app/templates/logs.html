@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warmup Logs - {{ app_name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+
+    <!-- Navigation Header -->
+    <nav class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="bg-indigo-600 text-white p-2 rounded-lg font-bold text-xl">
+                <i class="fa-solid fa-fire-flame-curved me-1"></i> IP Warmup
+            </div>
+            <span class="text-xl font-semibold tracking-wide text-slate-200">{{ app_name }}</span>
+        </div>
+        <div class="flex space-x-6">
+            <a href="/" class="text-slate-400 font-medium hover:text-indigo-300 flex items-center gap-2">
+                <i class="fa-solid fa-chart-line"></i> Dashboard
+            </a>
+            <a href="/accounts" class="text-slate-400 font-medium hover:text-indigo-300 flex items-center gap-2">
+                <i class="fa-solid fa-inbox"></i> Seed Accounts
+            </a>
+            <a href="/logs" class="text-indigo-400 font-medium hover:text-indigo-300 flex items-center gap-2">
+                <i class="fa-solid fa-list-check"></i> Warmup Logs
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="p-6 max-w-7xl mx-auto space-y-6">
+        
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-100">Warmup Execution Logs</h1>
+                <p class="text-slate-400 text-sm">Detailed history of open triggers, CTA link clicks, auto-replies, and spam rescues.</p>
+            </div>
+            <button onclick="fetchLogs()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-medium px-4 py-2 rounded-lg flex items-center gap-2">
+                <i class="fa-solid fa-arrows-rotate"></i> Refresh Logs
+            </button>
+        </div>
+
+        <!-- Logs Table Card -->
+        <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-lg">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm border-collapse">
+                    <thead class="bg-slate-900/80 text-slate-400 font-semibold border-b border-slate-700">
+                        <tr>
+                            <th class="p-4">Timestamp</th>
+                            <th class="p-4">Seed Account</th>
+                            <th class="p-4">Action</th>
+                            <th class="p-4">Subject</th>
+                            <th class="p-4">Sender Email</th>
+                            <th class="p-4">Execution Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-tbody" class="divide-y divide-slate-700/60">
+                        <tr>
+                            <td colspan="6" class="p-8 text-center text-slate-500">Loading system logs...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        async function fetchLogs() {
+            try {
+                const res = await fetch('/api/logs?limit=100');
+                const logs = await res.json();
+                const tbody = document.getElementById('logs-tbody');
+
+                if (logs.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="p-8 text-center text-slate-500">No activity logs recorded yet. Run a warmup cycle to generate logs.</td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = logs.map(log => {
+                    let badgeClass = 'bg-slate-700 text-slate-300';
+                    let icon = 'fa-info-circle';
+                    
+                    if (log.action === 'OPEN') { badgeClass = 'bg-emerald-950 text-emerald-300 border border-emerald-800'; icon = 'fa-eye'; }
+                    else if (log.action === 'CLICK') { badgeClass = 'bg-cyan-950 text-cyan-300 border border-cyan-800'; icon = 'fa-hand-pointer'; }
+                    else if (log.action === 'REPLY') { badgeClass = 'bg-purple-950 text-purple-300 border border-purple-800'; icon = 'fa-reply'; }
+                    else if (log.action === 'SPAM_RESCUE') { badgeClass = 'bg-amber-950 text-amber-300 border border-amber-800'; icon = 'fa-shield-cat'; }
+
+                    return `
+                        <tr class="hover:bg-slate-750 transition">
+                            <td class="p-4 text-slate-400 font-mono text-xs whitespace-nowrap">${log.created_at}</td>
+                            <td class="p-4 font-medium text-slate-200 whitespace-nowrap">${log.account_email}</td>
+                            <td class="p-4 whitespace-nowrap">
+                                <span class="px-2.5 py-1 rounded-md text-xs font-semibold ${badgeClass} inline-flex items-center gap-1">
+                                    <i class="fa-solid ${icon}"></i> ${log.action}
+                                </span>
+                            </td>
+                            <td class="p-4 text-slate-200 max-w-xs truncate">${log.subject || '(No Subject)'}</td>
+                            <td class="p-4 text-slate-400 max-w-xs truncate">${log.sender_email || '-'}</td>
+                            <td class="p-4 text-slate-300 max-w-md text-xs font-mono break-all">${log.details || '-'}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error("Error fetching logs:", err);
+            }
+        }
+
+        fetchLogs();
+    </script>
+</body>
+</html>
