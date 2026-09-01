@@ -15,13 +15,34 @@ from app.services.imap_listener import IMAPService
 from app.services.smtp_replyer import SMTPReplyService
 from app.services.warmup_worker import warmup_worker
 
-# Create DB tables
-Base.metadata.create_all(bind=engine)
+# Create DB tables safely
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"DB Init warning: {e}")
 
 app = FastAPI(title=settings.APP_NAME)
 
-templates_dir = os.path.join(os.path.dirname(__file__), "templates")
+# Template Directory Resolution
+base_dir = os.path.dirname(os.path.abspath(__file__))
+templates_dir = os.path.join(base_dir, "templates")
+if not os.path.exists(templates_dir):
+    templates_dir = os.path.join(os.getcwd(), "app", "templates")
+
 templates = Jinja2Templates(directory=templates_dir)
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    return JSONResponse(
+        status_code=500,
+        content={
+            "status": "error",
+            "message": str(exc),
+            "traceback": traceback.format_exc().splitlines()
+        }
+    )
 
 
 @app.on_event("startup")

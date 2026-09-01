@@ -1,9 +1,22 @@
 import os
 from pydantic_settings import BaseSettings
 
+def get_default_db_url() -> str:
+    # On Vercel / serverless or read-only environments, store DB in /tmp
+    if os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV") or os.environ.get("AWS_EXECUTION_ENV"):
+        return "sqlite:////tmp/warmup.db"
+    try:
+        test_path = "./.perm_test"
+        with open(test_path, "w") as f:
+            f.write("test")
+        os.remove(test_path)
+        return "sqlite:///./warmup.db"
+    except Exception:
+        return "sqlite:////tmp/warmup.db"
+
 class Settings(BaseSettings):
     APP_NAME: str = "IP Warmup Automation System"
-    DATABASE_URL: str = "sqlite:////tmp/warmup.db" if os.environ.get("VERCEL") else "sqlite:///./warmup.db"
+    DATABASE_URL: str = get_default_db_url()
     SECRET_KEY: str = "super-secret-key-change-in-production"
     
     # Worker Settings
