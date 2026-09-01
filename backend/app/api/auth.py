@@ -29,8 +29,22 @@ def register_user(payload: UserCreate, db: Session = Depends(get_db)):
 @router.post("/token", response_model=Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == form_data.username).first()
+
+    # Auto-seed default admin if database is empty (e.g. serverless cold start)
+    if not user and db.query(User).count() == 0:
+        if form_data.username == "admin" and form_data.password == "admin123":
+            user = User(
+                username="admin",
+                email="admin@example.com",
+                hashed_password=hash_password("admin123"),
+                is_admin=True
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
     if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid login credentials")
 
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}

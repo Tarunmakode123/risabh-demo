@@ -13,11 +13,13 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     try {
-      const formData = new FormData();
-      formData.append('username', username);
-      formData.append('password', password);
+      const params = new URLSearchParams();
+      params.append('username', username.trim());
+      params.append('password', password.trim());
 
-      const res = await API.post('/api/auth/token', formData);
+      const res = await API.post('/api/auth/token', params, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
       localStorage.setItem('token', res.data.access_token);
       navigate('/');
     } catch (err) {
