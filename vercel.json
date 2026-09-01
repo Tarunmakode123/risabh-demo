@@ -2,16 +2,28 @@
   "builds": [
     {
       "src": "api/index.py",
-      "use": "@vercel/python",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
       "config": {
-        "includeFiles": "app/templates/**"
+        "distDir": "dist"
       }
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/api/(.*)",
       "dest": "api/index.py"
+    },
+    {
+      "src": "/health(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "frontend/$1"
     }
   ]
 }
