@@ -26,13 +26,15 @@ templates = Jinja2Templates(directory=templates_dir)
 
 @app.on_event("startup")
 async def startup_event():
-    # Start background worker automatically
-    warmup_worker.start()
+    # Only start background worker in non-serverless environment
+    if not os.environ.get("VERCEL"):
+        warmup_worker.start()
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    warmup_worker.stop()
+    if not os.environ.get("VERCEL"):
+        warmup_worker.stop()
 
 
 # --- Pydantic Schemas ---

@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     APP_NAME: str = "IP Warmup Automation System"
-    DATABASE_URL: str = "sqlite:///./warmup.db"
+    DATABASE_URL: str = "sqlite:////tmp/warmup.db" if os.environ.get("VERCEL") else "sqlite:///./warmup.db"
     SECRET_KEY: str = "super-secret-key-change-in-production"
     
     # Worker Settings
