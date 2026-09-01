@@ -28,39 +28,24 @@ def register_user(payload: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/token", response_model=Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    # Ensure database schema exists
-    try:
-        Base.metadata.create_all(bind=engine)
-    except Exception:
-        pass
+    username = (form_data.username or "").strip()
+    password = (form_data.password or "").strip()
 
-    username = form_data.username.strip()
-    password = form_data.password.strip()
-
-    user = db.query(User).filter(User.username == username).first()
-
-    # Guaranteed Default Admin auto-creation / password sync for serverless environments
+    # Guaranteed Default Admin Login (Fail-proof for any serverless/cloud environment)
     if username == "admin" and password == "admin123":
-        if not user:
-            user = User(
-                username="admin",
-                email="admin@example.com",
-                hashed_password=hash_password("admin123"),
-                is_admin=True
-            )
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-        else:
-            if not verify_password("admin123", user.hashed_password):
-                user.hashed_password = hash_password("admin123")
-                db.commit()
+        access_token = create_access_token(data={"sub": "admin"})
+        return {"access_token": access_token, "token_type": "bearer"}
 
-    if not user or not verify_password(password, user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid login credentials")
+    # Database User Authentication
+    try:
+        user = db.query(User).filter(User.username == username).first()
+        if user and verify_password(password, user.hashed_password):
+            access_token = create_access_token(data={"sub": user.username})
+            return {"access_token": access_token, "token_type": "bearer"}
+    except Exception as e:
+        print(f"Auth DB Exception: {e}")
 
-    access_token = create_access_token(data={"sub": user.username})
-    return {"access_token": access_token, "token_type": "bearer"}
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid login credentials")
 
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
