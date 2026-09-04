@@ -20,6 +20,9 @@ class CTAService:
         if allowed_domains is None:
             allowed_domains = settings.ALLOWED_CTA_DOMAINS
 
+        if isinstance(allowed_domains, str):
+            allowed_domains = [d.strip() for d in allowed_domains.split(",") if d.strip()]
+
         try:
             parsed = urlparse(url)
             

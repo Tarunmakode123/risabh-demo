@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.join(base_dir, "backend"))
 import time
 import uuid
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from app.database import SessionLocal, engine, Base
 from app.models import InboxAccount, ProcessedEmail, CTALog, ReplyLog
 from app.security import decrypt_credential, encrypt_credential
@@ -85,7 +85,7 @@ def poll_and_process():
                     recipient=msg.recipient or acc.email,
                     subject=msg.subject,
                     status="DETECTED",
-                    received_at=datetime.utcnow()
+                    received_at=datetime.now(timezone.utc)
                 )
                 db.add(email_rec)
                 try:
@@ -138,7 +138,7 @@ def poll_and_process():
                         in_reply_to=msg.message_id,
                         reply_body=reply_body,
                         delay_seconds=5,
-                        sent_at=datetime.utcnow() if success else None,
+                        sent_at=datetime.now(timezone.utc) if success else None,
                         status="SENT" if success else "FAILED",
                         error_message=None if success else reply_msg
                     )
