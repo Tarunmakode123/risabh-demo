@@ -3,9 +3,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List, Optional
 
 def get_default_db_url() -> str:
-    # On Vercel / serverless or read-only environments, use writable /tmp SQLite database file
+    # On Vercel / serverless or read-only environments, use in-memory SQLite database
     if os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV") or os.environ.get("AWS_EXECUTION_ENV"):
-        return "sqlite:////tmp/email_automation.db"
+        return "sqlite:///:memory:"
     try:
         test_path = "./.perm_test"
         with open(test_path, "w") as f:
@@ -13,7 +13,7 @@ def get_default_db_url() -> str:
         os.remove(test_path)
         return "sqlite:///./email_automation.db"
     except Exception:
-        return "sqlite:////tmp/email_automation.db"
+        return "sqlite:///:memory:"
 
 class Settings(BaseSettings):
     APP_NAME: str = "ArrowMail / GreenArrow Interaction Automation"
