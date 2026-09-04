@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import ProcessedEmail, CTALog, ReplyLog
 from app.schemas import ProcessedEmailOut, CTALogOut, ReplyLogOut
+from app.api.dashboard import auto_sync_if_empty
 
 router = APIRouter(prefix="/api/emails", tags=["Processed Emails"])
 
@@ -13,6 +14,7 @@ def list_processed_emails(
     status: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
+    auto_sync_if_empty(db)
     query = db.query(ProcessedEmail)
     if status:
         query = query.filter(ProcessedEmail.status == status)
