@@ -1,9 +1,9 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.config import settings
-from app.database import engine, Base
-from app.api import auth, accounts, emails, settings as settings_api, dashboard, system
+from .config import settings
+from .database import engine, Base
+from .api import auth, accounts, emails, settings as settings_api, dashboard, system
 
 # Safely attempt database table creation without blocking startup
 try:
