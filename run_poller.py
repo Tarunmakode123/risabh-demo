@@ -124,12 +124,12 @@ def poll_and_process():
                         use_ssl=False
                     )
                     reply_body = f"Thanks for sharing this! Received your email regarding '{msg.subject}'."
-                    success, reply_msg, sent_msg_id = smtp_svc.send_threaded_reply(
-                        recipient=msg.sender,
-                        subject=msg.subject,
-                        reply_body=reply_body,
+                    success, reply_msg = smtp_svc.send_threaded_reply(
+                        to_email=msg.sender,
+                        original_subject=msg.subject or "",
                         in_reply_to=msg.in_reply_to or msg.message_id,
-                        references=msg.references_header or msg.message_id,
+                        references_header=msg.references_header or msg.message_id,
+                        reply_body=reply_body,
                         correlation_id=correlation_id
                     )
 
