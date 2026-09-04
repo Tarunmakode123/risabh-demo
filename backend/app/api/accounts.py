@@ -1,3 +1,5 @@
+import uuid
+from datetime import datetime
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -10,7 +12,7 @@ from app.services.imap_service import IMAPService
 from app.services.smtp_service import SMTPService
 from app.services.deduplication import DeduplicationService
 from app.services.cta_service import CTAService
-from app.services.workflow_service import WorkflowStateService
+from app.services.workflow_service import WorkflowService
 
 router = APIRouter(prefix="/api/accounts", tags=["Inbox Accounts"])
 
@@ -32,8 +34,9 @@ def seed_default_accounts(db: Session):
             )
             db.add(default_acc)
             db.commit()
-    except Exception:
-        pass
+    except Exception as e:
+        db.rollback()
+        print(f"Seed accounts note: {e}")
 
 @router.get("", response_model=List[InboxAccountOut])
 def list_accounts(db: Session = Depends(get_db)):
@@ -115,8 +118,24 @@ def sync_account_emails_now(account_id: int, db: Session = Depends(get_db)):
             continue
 
         # Create processed email record
-        email_rec, err = WorkflowStateService.create_initial_email_record(db, acc.id, msg)
-        if not email_rec:
+        email_rec = ProcessedEmail(
+            correlation_id=str(uuid.uuid4()),
+            account_id=acc.id,
+            message_id=msg.message_id,
+            thread_id=msg.thread_id,
+            sender=msg.sender,
+            recipient=msg.recipient or acc.email,
+            subject=msg.subject,
+            campaign_id=msg.campaign_id,
+            status="DETECTED",
+            received_at=msg.received_at or datetime.utcnow()
+        )
+        db.add(email_rec)
+        try:
+            db.commit()
+            db.refresh(email_rec)
+        except Exception:
+            db.rollback()
             continue
 
         # Extract & validate CTA
@@ -133,11 +152,11 @@ def sync_account_emails_now(account_id: int, db: Session = Depends(get_db)):
                 status="COMPLETED" if is_app else "BLOCKED"
             )
             if is_app:
-                WorkflowStateService.transition_state(db, email_rec.id, "CTA_CLICKED")
+                WorkflowService.transition_state(db, email_rec, "CTA_CLICKED")
             else:
-                WorkflowStateService.transition_state(db, email_rec.id, "CTA_BLOCKED", error_message=app_reason)
+                WorkflowService.transition_state(db, email_rec, "CTA_BLOCKED", error_msg=app_reason)
         else:
-            WorkflowStateService.transition_state(db, email_rec.id, "CTA_NOT_FOUND")
+            WorkflowService.transition_state(db, email_rec, "CTA_NOT_FOUND")
 
         synced_count += 1
 
