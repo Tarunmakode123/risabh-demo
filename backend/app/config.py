@@ -1,54 +1,52 @@
 import os
-from typing import List
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import List, Optional
+
+def get_default_db_url() -> str:
+    # On Vercel / serverless or read-only environments, use in-memory SQLite database
+    if os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV") or os.environ.get("AWS_EXECUTION_ENV"):
+        return "sqlite:///:memory:"
+    try:
+        test_path = "./.perm_test"
+        with open(test_path, "w") as f:
+            f.write("test")
+        os.remove(test_path)
+        return "sqlite:///./email_automation.db"
+    except Exception:
+        return "sqlite:///:memory:"
 
 class Settings(BaseSettings):
-    APP_NAME: str = "Enterprise Email Interaction Bot (ArrowMail/GreenArrow)"
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./email_automation.db")
-    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    APP_NAME: str = "ArrowMail / GreenArrow Interaction Automation"
+    DEBUG: bool = False
+    DATABASE_URL: str = get_default_db_url()
 
-    # Security & Encryption Secrets
-    JWT_SECRET: str = os.getenv("JWT_SECRET", "super-secret-jwt-signing-key-32bytes-long")
+    # Celery & Redis
+    REDIS_URL: str = "redis://localhost:6379/0"
+
+    # Security & Encryption
+    JWT_SECRET: str = "supersecretjwtkey_arrowmail_2026_change_in_production"
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 Hours
-    ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", "dGhpcy1pcy1hLXNhbXBsZS1mZXJuZXQta2V5LTMyYnl0ZXM9")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 Days
+    ENCRYPTION_KEY: str = "supersecretfernetkey123456789012"  # Fernet key
 
-    # IMAP Configuration
-    IMAP_POLL_INTERVAL: int = int(os.getenv("IMAP_POLL_INTERVAL", "15"))
+    # Allowlists & Security Rules
+    ALLOWED_SENDER_DOMAINS: str = "example.com,greenarrow.internal,arrowmail.internal,gmail.com"
+    ALLOWED_RECIPIENT_DOMAINS: str = "test.example.com,internal.inbox,gmail.com"
+    ALLOWED_CTA_DOMAINS: str = "test.example.com,landing.arrowmail.internal,google.com,github.com,example.com"
 
     # Playwright Settings
-    PLAYWRIGHT_HEADLESS: bool = os.getenv("PLAYWRIGHT_HEADLESS", "true").lower() == "true"
-    PLAYWRIGHT_TIMEOUT: int = int(os.getenv("PLAYWRIGHT_TIMEOUT", "30000"))
-    SCREENSHOT_ON_SUCCESS: bool = os.getenv("SCREENSHOT_ON_SUCCESS", "false").lower() == "true"
-    SCREENSHOT_ON_FAILURE: bool = os.getenv("SCREENSHOT_ON_FAILURE", "true").lower() == "true"
-    SCREENSHOT_DIR: str = os.getenv("SCREENSHOT_DIR", "./screenshots")
+    PLAYWRIGHT_HEADLESS: bool = True
+    PLAYWRIGHT_TIMEOUT_MS: int = 30000
 
-    # Auto-Reply Delays (Seconds)
-    MIN_REPLY_DELAY: int = int(os.getenv("MIN_REPLY_DELAY", "30"))
-    MAX_REPLY_DELAY: int = int(os.getenv("MAX_REPLY_DELAY", "180"))
+    # System Settings
+    MAX_CONCURRENT_WORKERS: int = 5
+    MIN_REPLY_DELAY: int = 30
+    MAX_REPLY_DELAY: int = 180
 
-    # Security Domain Allowlists
-    ALLOWED_SENDER_DOMAINS_RAW: str = os.getenv("ALLOWED_SENDER_DOMAINS", "example.com,greenarrow.internal,arrowmail.internal")
-    ALLOWED_RECIPIENT_DOMAINS_RAW: str = os.getenv("ALLOWED_RECIPIENT_DOMAINS", "test.example.com,internal.inbox")
-    ALLOWED_CTA_DOMAINS_RAW: str = os.getenv("ALLOWED_CTA_DOMAINS", "test.example.com,landing.arrowmail.internal")
-
-    # Worker Concurrency
-    MAX_CONCURRENT_WORKERS: int = int(os.getenv("MAX_CONCURRENT_WORKERS", "5"))
-
-    @property
-    def ALLOWED_SENDER_DOMAINS(self) -> List[str]:
-        return [d.strip().lower() for d in self.ALLOWED_SENDER_DOMAINS_RAW.split(",") if d.strip()]
-
-    @property
-    def ALLOWED_RECIPIENT_DOMAINS(self) -> List[str]:
-        return [d.strip().lower() for d in self.ALLOWED_RECIPIENT_DOMAINS_RAW.split(",") if d.strip()]
-
-    @property
-    def ALLOWED_CTA_DOMAINS(self) -> List[str]:
-        return [d.strip().lower() for d in self.ALLOWED_CTA_DOMAINS_RAW.split(",") if d.strip()]
-
-    class Config:
-        env_file = ".env"
-        extra = "allow"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
 
 settings = Settings()
