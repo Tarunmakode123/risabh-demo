@@ -14,12 +14,34 @@ from app.services.workflow_service import WorkflowStateService
 
 router = APIRouter(prefix="/api/accounts", tags=["Inbox Accounts"])
 
+def seed_default_accounts(db: Session):
+    try:
+        if db.query(InboxAccount).count() == 0:
+            enc_pass = encrypt_credential("meswfbzmtyaiczud")
+            default_acc = InboxAccount(
+                email="aiwithtarun1@gmail.com",
+                imap_host="imap.gmail.com",
+                imap_port=993,
+                smtp_host="smtp.gmail.com",
+                smtp_port=587,
+                username="aiwithtarun1@gmail.com",
+                encrypted_password=enc_pass,
+                use_ssl=True,
+                folder="INBOX",
+                is_active=True
+            )
+            db.add(default_acc)
+            db.commit()
+    except Exception:
+        pass
+
 @router.get("", response_model=List[InboxAccountOut])
 def list_accounts(db: Session = Depends(get_db)):
     try:
         Base.metadata.create_all(bind=engine)
     except Exception:
         pass
+    seed_default_accounts(db)
     return db.query(InboxAccount).all()
 
 @router.post("", response_model=InboxAccountOut)
