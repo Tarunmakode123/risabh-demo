@@ -137,9 +137,10 @@ def get_dashboard_metrics(db: Session = Depends(get_db)):
 @router.get("/activity")
 def get_recent_activity(limit: int = 20, db: Session = Depends(get_db)):
     auto_sync_if_empty(db)
-    emails = db.query(ProcessedEmail).order_by(ProcessedEmail.created_at.desc()).limit(limit).all()
+    emails = db.query(ProcessedEmail).order_by(ProcessedEmail.id.desc()).limit(limit).all()
     result = []
     for e in emails:
+        ts = e.received_at or e.created_at
         result.append({
             "id": e.id,
             "correlation_id": e.correlation_id,
@@ -147,10 +148,10 @@ def get_recent_activity(limit: int = 20, db: Session = Depends(get_db)):
             "sender": e.sender,
             "recipient": e.recipient,
             "subject": e.subject or "(No Subject)",
-            "received_at": e.received_at.strftime("%Y-%m-%d %H:%M:%S") if e.received_at else "",
-            "opened_at": e.opened_at.strftime("%Y-%m-%d %H:%M:%S") if e.opened_at else "-",
+            "received_at": ts.isoformat() if ts else "",
+            "opened_at": e.opened_at.isoformat() if e.opened_at else "-",
             "status": e.status,
             "error_message": e.error_message or "",
-            "created_at": e.created_at.strftime("%Y-%m-%d %H:%M:%S") if e.created_at else ""
+            "created_at": ts.isoformat() if ts else ""
         })
     return result

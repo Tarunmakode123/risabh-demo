@@ -85,7 +85,7 @@ def poll_and_process():
                     recipient=msg.recipient or acc.email,
                     subject=msg.subject,
                     status="DETECTED",
-                    received_at=datetime.now(timezone.utc)
+                    received_at=msg.parsed_date or datetime.now(timezone.utc)
                 )
                 db.add(email_rec)
                 try:

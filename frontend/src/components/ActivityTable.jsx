@@ -68,6 +68,24 @@ export default function ActivityTable({ activities, onSelectActivity, activeFilt
     );
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'Just now';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleString([], {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <div className="space-y-3">
       {/* Search & Filter Toolbar */}
@@ -129,7 +147,7 @@ export default function ActivityTable({ activities, onSelectActivity, activeFilt
                   className="group hover:bg-slate-800/80 transition-all duration-150 cursor-pointer"
                 >
                   <td className="p-3.5 pl-4 text-slate-400 font-mono text-[11px] whitespace-nowrap">
-                    {act.created_at || 'Just now'}
+                    {formatDate(act.created_at || act.received_at)}
                   </td>
                   <td className="p-3.5 text-slate-200 font-medium whitespace-nowrap">
                     {act.inbox}

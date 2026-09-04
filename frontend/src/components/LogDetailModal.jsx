@@ -57,6 +57,24 @@ export default function LogDetailModal({ activity, onClose }) {
     return <div className="w-3 h-3 rounded-full bg-slate-700" />;
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'Just now';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleString([], {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in" onClick={onClose}>
       <div 
@@ -74,7 +92,7 @@ export default function LogDetailModal({ activity, onClose }) {
                 {activity.subject || 'Email Details'}
               </h2>
               <p className="text-xs text-slate-400 flex items-center gap-2">
-                <span>Received: {activity.created_at || 'Just now'}</span>
+                <span>Received: {formatDate(activity.received_at || activity.created_at)}</span>
                 <span>•</span>
                 <span className="font-mono text-indigo-300">ID #{activity.id}</span>
               </p>

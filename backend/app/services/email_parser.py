@@ -1,7 +1,9 @@
 import email
+import email.utils
 from email.header import decode_header
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from typing import List, Optional
 from bs4 import BeautifulSoup
 
@@ -25,6 +27,7 @@ class ParsedEmailData:
     links: List[ExtractedLink]
     in_reply_to: Optional[str]
     references_header: Optional[str]
+    parsed_date: Optional[datetime] = None
 
 class EmailParserService:
     @staticmethod
@@ -56,6 +59,13 @@ class EmailParserService:
         from_hdr = cls.decode_mime_words(msg.get("From"))
         to_hdr = cls.decode_mime_words(msg.get("To")) or fallback_recipient
         date_str = cls.decode_mime_words(msg.get("Date"))
+
+        parsed_date = None
+        if date_str:
+            try:
+                parsed_date = email.utils.parsedate_to_datetime(date_str)
+            except Exception:
+                pass
 
         _, sender = email.utils.parseaddr(from_hdr)
         _, recipient = email.utils.parseaddr(to_hdr)
@@ -113,5 +123,6 @@ class EmailParserService:
             html_body=html_body,
             links=extracted_links,
             in_reply_to=in_reply_to,
-            references_header=references_header
+            references_header=references_header,
+            parsed_date=parsed_date
         )
