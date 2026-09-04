@@ -100,7 +100,7 @@ def sync_account_emails_now(account_id: int, db: Session = Depends(get_db)):
 
     seed_default_accounts(db)
 
-    acc = db.query(InboxAccount).filter((InboxAccount.id == account_id) | (InboxAccount.email == "aiwithtarun1@gmail.com")).first()
+    acc = db.query(InboxAccount).filter((InboxAccount.id == account_id) | (InboxAccount.email == "aiwithtarun1@gmail.com")).first() or db.query(InboxAccount).first()
     if not acc:
         raise HTTPException(status_code=404, detail="Account not found.")
 
