@@ -16,25 +16,36 @@ export default function LogDetailModal({ activity, onClose }) {
   };
 
   const getStepStatus = (stepName) => {
-    const status = activity.status || '';
-    if (status === 'ERROR' || status === 'FAILED') return 'error';
-    
+    const status = (activity.status || '').toUpperCase();
+    if (status === 'ERROR' || status === 'FAILED') {
+      if (stepName === 'REPLIED') return 'error';
+      return 'complete';
+    }
+
+    if (status === 'CTA_BLOCKED' || status === 'CTA_NOT_FOUND') {
+      if (stepName === 'DETECTED') return 'complete';
+      if (stepName === 'CTA_VALIDATED') return 'warning';
+      return 'pending';
+    }
+
     if (stepName === 'DETECTED') return 'complete';
+
     if (stepName === 'CTA_VALIDATED') {
       if (['CTA_VALIDATED', 'CTA_CLICKED', 'REPLIED', 'COMPLETED'].includes(status)) return 'complete';
-      if (['CTA_BLOCKED', 'CTA_NOT_FOUND'].includes(status)) return 'warning';
-      return 'active';
+      return 'pending';
     }
+
     if (stepName === 'CTA_CLICKED') {
       if (['CTA_CLICKED', 'REPLIED', 'COMPLETED'].includes(status)) return 'complete';
       if (status === 'CTA_VALIDATED') return 'active';
       return 'pending';
     }
+
     if (stepName === 'REPLIED') {
       if (['REPLIED', 'COMPLETED'].includes(status)) return 'complete';
-      if (status === 'CTA_CLICKED') return 'active';
       return 'pending';
     }
+
     return 'pending';
   };
 
@@ -99,7 +110,7 @@ export default function LogDetailModal({ activity, onClose }) {
                     <div className="flex items-center justify-center h-8 w-8 rounded-full bg-slate-900 border border-slate-700/60 shadow-inner">
                       {renderStepIcon(state)}
                     </div>
-                    <span className={`text-xs font-medium ${state === 'complete' ? 'text-emerald-400' : state === 'warning' ? 'text-amber-400' : 'text-slate-400'}`}>
+                    <span className={`text-xs font-medium ${state === 'complete' ? 'text-emerald-400' : state === 'warning' ? 'text-amber-400' : state === 'active' ? 'text-indigo-400' : 'text-slate-500'}`}>
                       {label}
                     </span>
                   </div>
