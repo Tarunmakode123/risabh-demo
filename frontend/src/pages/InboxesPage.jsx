@@ -73,6 +73,16 @@ export default function InboxesPage() {
     }
   };
 
+  const handleSyncNow = async (id) => {
+    setTestResult('Checking for new emails via IMAP...');
+    try {
+      const res = await API.post(`/api/accounts/${id}/sync-now`);
+      setTestResult(`✓ Synced ${res.data.synced_count} new email(s) from IMAP server! (${res.data.total_fetched} total checked)`);
+    } catch (err) {
+      setTestResult('Error syncing emails: ' + err.message);
+    }
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
@@ -109,14 +119,17 @@ export default function InboxesPage() {
               </div>
 
               <div className="text-xs text-slate-400 space-y-1 bg-slate-900/60 p-3 rounded-lg border border-slate-700/50">
-                <div><strong class="text-slate-300">IMAP:</strong> {acc.imap_host}:{acc.imap_port}</div>
-                <div><strong class="text-slate-300">SMTP:</strong> {acc.smtp_host}:{acc.smtp_port}</div>
-                <div><strong class="text-slate-300">Folder:</strong> {acc.folder}</div>
+                <div><strong className="text-slate-300">IMAP:</strong> {acc.imap_host}:{acc.imap_port}</div>
+                <div><strong className="text-slate-300">SMTP:</strong> {acc.smtp_host}:{acc.smtp_port}</div>
+                <div><strong className="text-slate-300">Folder:</strong> {acc.folder}</div>
               </div>
             </div>
 
             <div className="flex justify-between items-center pt-3 border-t border-slate-700/60 text-xs">
               <div className="flex gap-2">
+                <button onClick={() => handleSyncNow(acc.id)} className="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1">
+                  <Plug size={12} /> Sync Inbox Now
+                </button>
                 <button onClick={() => handleTestImap(acc.id)} className="text-slate-300 hover:text-indigo-400 flex items-center gap-1">
                   <Plug size={12} /> Test IMAP
                 </button>

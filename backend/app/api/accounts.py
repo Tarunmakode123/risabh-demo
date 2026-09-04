@@ -2,12 +2,15 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db, engine, Base
-from app.models import InboxAccount, User
+from app.models import InboxAccount, ProcessedEmail, CTALog, ReplyLog
 from app.schemas import InboxAccountCreate, InboxAccountOut
 from app.security import encrypt_credential, decrypt_credential
 from app.dependencies import get_current_user
 from app.services.imap_service import IMAPService
 from app.services.smtp_service import SMTPService
+from app.services.deduplication import DeduplicationService
+from app.services.cta_service import CTAService
+from app.services.workflow_service import WorkflowStateService
 
 router = APIRouter(prefix="/api/accounts", tags=["Inbox Accounts"])
 
@@ -62,6 +65,61 @@ def create_account(payload: InboxAccountCreate, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Failed to create or update inbox account: {str(e)}")
+
+@router.post("/{account_id}/sync-now")
+def sync_account_emails_now(account_id: int, db: Session = Depends(get_db)):
+    acc = db.query(InboxAccount).filter(InboxAccount.id == account_id).first()
+    if not acc:
+        raise HTTPException(status_code=404, detail="Account not found.")
+
+    plain_pass = decrypt_credential(acc.encrypted_password)
+    service = IMAPService(
+        host=acc.imap_host,
+        port=acc.imap_port,
+        username=acc.username,
+        password=plain_pass,
+        use_ssl=acc.use_ssl,
+        folder=acc.folder
+    )
+
+    # Fetch new messages directly via IMAP
+    messages = service.fetch_new_messages(limit=10)
+    synced_count = 0
+
+    for msg in messages:
+        # Check deduplication
+        is_dup = DeduplicationService.is_duplicate(db, acc.id, msg.message_id)
+        if is_dup:
+            continue
+
+        # Create processed email record
+        email_rec, err = WorkflowStateService.create_initial_email_record(db, acc.id, msg)
+        if not email_rec:
+            continue
+
+        # Extract & validate CTA
+        candidates = CTAService.extract_candidate_links(msg.html_body or msg.text_body or "")
+        best_cta, cta_status = CTAService.find_best_cta(candidates)
+
+        if best_cta:
+            is_app, app_reason = CTAService.validate_cta_domain(best_cta)
+            CTAService.log_cta_attempt(
+                db=db,
+                email_id=email_rec.id,
+                url=best_cta,
+                is_approved=is_app,
+                status="COMPLETED" if is_app else "BLOCKED"
+            )
+            if is_app:
+                WorkflowStateService.transition_state(db, email_rec.id, "CTA_CLICKED")
+            else:
+                WorkflowStateService.transition_state(db, email_rec.id, "CTA_BLOCKED", error_message=app_reason)
+        else:
+            WorkflowStateService.transition_state(db, email_rec.id, "CTA_NOT_FOUND")
+
+        synced_count += 1
+
+    return {"success": True, "synced_count": synced_count, "total_fetched": len(messages)}
 
 @router.delete("/{account_id}")
 def delete_account(account_id: int, db: Session = Depends(get_db)):
