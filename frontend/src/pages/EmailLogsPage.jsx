@@ -12,7 +12,9 @@ export default function EmailLogsPage() {
     try {
       const url = filterStatus ? `/api/emails?status=${filterStatus}` : '/api/emails';
       const res = await API.get(url);
-      setEmails(res.data);
+      if (res.data && res.data.length > 0) {
+        setEmails(res.data);
+      }
     } catch (err) {
       console.error(err);
     } finally {

@@ -16,7 +16,9 @@ export default function DashboardPage() {
         API.get('/api/dashboard/activity')
       ]);
       setStats(statsRes.data);
-      setActivities(actRes.data);
+      if (actRes.data && actRes.data.length > 0) {
+        setActivities(actRes.data);
+      }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     } finally {
