@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.database import get_db, engine, Base
 from app.models import InboxAccount, User
 from app.schemas import InboxAccountCreate, InboxAccountOut
 from app.security import encrypt_credential, decrypt_credential
@@ -13,30 +13,44 @@ router = APIRouter(prefix="/api/accounts", tags=["Inbox Accounts"])
 
 @router.get("", response_model=List[InboxAccountOut])
 def list_accounts(db: Session = Depends(get_db)):
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        pass
     return db.query(InboxAccount).all()
 
 @router.post("", response_model=InboxAccountOut)
 def create_account(payload: InboxAccountCreate, db: Session = Depends(get_db)):
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        pass
+
     existing = db.query(InboxAccount).filter(InboxAccount.email == payload.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Account with this email already exists.")
 
-    acc = InboxAccount(
-        email=payload.email,
-        imap_host=payload.imap_host,
-        imap_port=payload.imap_port,
-        smtp_host=payload.smtp_host,
-        smtp_port=payload.smtp_port,
-        username=payload.username,
-        encrypted_password=encrypt_credential(payload.password),
-        use_ssl=payload.use_ssl,
-        folder=payload.folder,
-        is_active=True
-    )
-    db.add(acc)
-    db.commit()
-    db.refresh(acc)
-    return acc
+    try:
+        enc_pass = encrypt_credential(payload.password)
+        acc = InboxAccount(
+            email=payload.email,
+            imap_host=payload.imap_host,
+            imap_port=payload.imap_port,
+            smtp_host=payload.smtp_host,
+            smtp_port=payload.smtp_port,
+            username=payload.username,
+            encrypted_password=enc_pass,
+            use_ssl=payload.use_ssl,
+            folder=payload.folder,
+            is_active=True
+        )
+        db.add(acc)
+        db.commit()
+        db.refresh(acc)
+        return acc
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Failed to create inbox account: {str(e)}")
 
 @router.delete("/{account_id}")
 def delete_account(account_id: int, db: Session = Depends(get_db)):

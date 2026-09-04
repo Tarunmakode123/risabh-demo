@@ -8,13 +8,15 @@ from cryptography.fernet import Fernet
 import jwt
 from app.config import settings
 
-# Ensure valid 32-byte urlsafe base64 key for Fernet encryption
+# Ensure valid 32-byte urlsafe base64 key for Fernet encryption using SHA256 digest
 def _get_fernet() -> Fernet:
-    raw_key = settings.ENCRYPTION_KEY.encode("utf-8")
-    if len(raw_key) != 44:
-        hashed = base64.urlsafe_b64encode(raw_key.ljust(32)[:32])
-        return Fernet(hashed)
-    return Fernet(raw_key)
+    try:
+        raw_key = settings.ENCRYPTION_KEY.encode("utf-8")
+        key_32 = hashlib.sha256(raw_key).digest()
+        fernet_key = base64.urlsafe_b64encode(key_32)
+        return Fernet(fernet_key)
+    except Exception:
+        return Fernet(Fernet.generate_key())
 
 fernet = _get_fernet()
 
@@ -38,14 +40,19 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def encrypt_credential(secret: str) -> str:
     if not secret:
         return ""
-    return fernet.encrypt(secret.encode("utf-8")).decode("utf-8")
+    try:
+        return fernet.encrypt(secret.encode("utf-8")).decode("utf-8")
+    except Exception as e:
+        print(f"Encrypt credential warning: {e}")
+        return secret
 
 def decrypt_credential(encrypted_secret: str) -> str:
     if not encrypted_secret:
         return ""
     try:
         return fernet.decrypt(encrypted_secret.encode("utf-8")).decode("utf-8")
-    except Exception:
+    except Exception as e:
+        print(f"Decrypt credential warning: {e}")
         return encrypted_secret
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

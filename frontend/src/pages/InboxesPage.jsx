@@ -10,9 +10,9 @@ export default function InboxesPage() {
     email: '',
     username: '',
     password: '',
-    imap_host: 'imap.example.com',
+    imap_host: 'imap.gmail.com',
     imap_port: 993,
-    smtp_host: 'smtp.example.com',
+    smtp_host: 'smtp.gmail.com',
     smtp_port: 587,
     use_ssl: true,
     folder: 'INBOX'
