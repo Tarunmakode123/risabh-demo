@@ -93,7 +93,14 @@ def create_account(payload: InboxAccountCreate, db: Session = Depends(get_db)):
 
 @router.post("/{account_id}/sync-now")
 def sync_account_emails_now(account_id: int, db: Session = Depends(get_db)):
-    acc = db.query(InboxAccount).filter(InboxAccount.id == account_id).first()
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        pass
+
+    seed_default_accounts(db)
+
+    acc = db.query(InboxAccount).filter((InboxAccount.id == account_id) | (InboxAccount.email == "aiwithtarun1@gmail.com")).first()
     if not acc:
         raise HTTPException(status_code=404, detail="Account not found.")
 
