@@ -1,10 +1,10 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models import ProcessedEmail, CTALog, ReplyLog
-from app.schemas import ProcessedEmailOut, CTALogOut, ReplyLogOut
-from app.api.dashboard import auto_sync_if_empty
+from ..database import get_db
+from ..models import ProcessedEmail, CTALog, ReplyLog
+from ..schemas import ProcessedEmailOut, CTALogOut, ReplyLogOut
+from .dashboard import seed_default_activity
 
 router = APIRouter(prefix="/api/emails", tags=["Processed Emails"])
 
@@ -14,7 +14,7 @@ def list_processed_emails(
     status: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    auto_sync_if_empty(db)
+    seed_default_activity(db)
     query = db.query(ProcessedEmail)
     if status:
         query = query.filter(ProcessedEmail.status == status)
