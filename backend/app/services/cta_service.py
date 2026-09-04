@@ -7,14 +7,35 @@ from app.config import settings
 
 logger = logging.getLogger("email_automation.cta_service")
 
+UNSUBSCRIBE_KEYWORDS = [
+    "unsubscribe", "optout", "opt-out", "opt_out", "remove-me", "remove", 
+    "email-preferences", "email_preferences", "manage-preferences", 
+    "subscription-preferences", "unsub"
+]
+
 class CTAService:
     @staticmethod
-    def is_domain_allowed(url: str, allowed_domains: List[str] = None) -> bool:
+    def is_unsubscribe_link(url: str, anchor_text: str = "") -> bool:
         """
-        Validates URL against strict domain allowlist.
-        Uses exact hostname parsing to reject malicious lookalikes (e.g. evil-example.com or test.example.com.evil.com).
+        Detects if a URL or anchor text represents an Unsubscribe, Opt-Out, or Email Preference link.
+        """
+        combined = f"{url} {anchor_text}".lower().strip()
+        for kw in UNSUBSCRIBE_KEYWORDS:
+            if kw in combined:
+                return True
+        return False
+
+    @classmethod
+    def is_domain_allowed(cls, url: str, allowed_domains: List[str] = None, anchor_text: str = "") -> bool:
+        """
+        Validates URL against strict domain allowlist and ensures it is NOT an unsubscribe link.
         """
         if not url:
+            return False
+
+        # Reject unsubscribe links immediately
+        if cls.is_unsubscribe_link(url, anchor_text):
+            logger.info(f"Skipping unsubscribe / opt-out link: '{url}' (Anchor: '{anchor_text}')")
             return False
 
         if allowed_domains is None:
@@ -59,12 +80,13 @@ class CTAService:
     ) -> Tuple[Optional[str], str]:
         """
         Extracts candidate CTA URLs using Priority 1 (Pattern), Priority 2 (Text), Priority 3 (Selector).
+        Filters out unsubscribe/opt-out links.
         Returns (candidate_url, status)
         """
         if allowed_domains is None:
             allowed_domains = settings.ALLOWED_CTA_DOMAINS
 
-        candidate_urls: List[str] = []
+        candidate_items: List[Tuple[str, str]] = []  # (url, anchor_text)
 
         if html_body:
             soup = BeautifulSoup(html_body, "html.parser")
@@ -73,43 +95,53 @@ class CTAService:
             if cta_url_pattern:
                 for a_tag in soup.find_all("a", href=True):
                     href = a_tag["href"].strip()
+                    anchor = a_tag.get_text().strip()
                     if re.search(cta_url_pattern, href, re.IGNORECASE):
-                        candidate_urls.append(href)
+                        if not cls.is_unsubscribe_link(href, anchor):
+                            candidate_items.append((href, anchor))
 
             # Priority 2: Configured CTA Text Match
-            if not candidate_urls and cta_text:
+            if not candidate_items and cta_text:
                 for a_tag in soup.find_all("a", href=True):
-                    text = a_tag.get_text().strip()
-                    if cta_text.lower() in text.lower():
-                        candidate_urls.append(a_tag["href"].strip())
+                    href = a_tag["href"].strip()
+                    anchor = a_tag.get_text().strip()
+                    if cta_text.lower() in anchor.lower():
+                        if not cls.is_unsubscribe_link(href, anchor):
+                            candidate_items.append((href, anchor))
 
             # Priority 3: Configured CSS Selector Match
-            if not candidate_urls and cta_selector:
+            if not candidate_items and cta_selector:
                 try:
                     for a_tag in soup.select(cta_selector):
                         if a_tag.name == "a" and a_tag.get("href"):
-                            candidate_urls.append(a_tag["href"].strip())
+                            href = a_tag["href"].strip()
+                            anchor = a_tag.get_text().strip()
+                            if not cls.is_unsubscribe_link(href, anchor):
+                                candidate_items.append((href, anchor))
                 except Exception:
                     pass
 
-            # Fallback: All anchor links in HTML body
-            if not candidate_urls:
+            # Fallback: All anchor links in HTML body (skipping unsubscribe links)
+            if not candidate_items:
                 for a_tag in soup.find_all("a", href=True):
                     href = a_tag["href"].strip()
-                    if href.startswith("http"):
-                        candidate_urls.append(href)
+                    anchor = a_tag.get_text().strip()
+                    if href.startswith("http") and not cls.is_unsubscribe_link(href, anchor):
+                        candidate_items.append((href, anchor))
 
         # Fallback to Plain Body regex
-        if not candidate_urls and plain_body:
+        if not candidate_items and plain_body:
             found = re.findall(r'https?://[^\s<>"]+', plain_body)
-            candidate_urls.extend(found)
+            for url in found:
+                if not cls.is_unsubscribe_link(url, ""):
+                    candidate_items.append((url, ""))
 
-        if not candidate_urls:
+        if not candidate_items:
             return None, "CTA_NOT_FOUND"
 
         # Validate candidate URLs against ALLOWED_CTA_DOMAINS
-        for url in candidate_urls:
-            if cls.is_domain_allowed(url, allowed_domains):
+        for url, anchor in candidate_items:
+            if cls.is_domain_allowed(url, allowed_domains, anchor_text=anchor):
                 return url, "CTA_VALIDATED"
 
         return None, "CTA_BLOCKED"

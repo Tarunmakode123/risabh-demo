@@ -39,6 +39,27 @@ def test_cta_extraction_priority():
     assert status == "CTA_VALIDATED"
     print("[PASS] test_cta_extraction_priority passed!")
 
+def test_unsubscribe_filtering():
+    html_body = """
+    <html>
+        <body>
+            <a href="https://test.example.com/unsubscribe">Unsubscribe from emails</a>
+            <a href="https://test.example.com/email-preferences">Manage Preferences</a>
+            <a href="https://test.example.com/claim-offer">Claim Your Offer</a>
+        </body>
+    </html>
+    """
+    url, status = CTAService.extract_and_validate_cta(
+        html_body=html_body,
+        plain_body="",
+        allowed_domains=["test.example.com"]
+    )
+
+    assert url == "https://test.example.com/claim-offer"
+    assert status == "CTA_VALIDATED"
+    print("[PASS] test_unsubscribe_filtering passed!")
+
 if __name__ == "__main__":
     test_domain_allowlist_validation()
     test_cta_extraction_priority()
+    test_unsubscribe_filtering()
