@@ -1,4 +1,5 @@
 import uuid
+import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -11,14 +12,16 @@ from app.services.deduplication import DeduplicationService
 from app.services.cta_service import CTAService
 from app.services.workflow_service import WorkflowService
 
+logger = logging.getLogger("email_automation.dashboard")
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
-def sync_inbox_emails(db: Session, limit: int = 10):
+def sync_inbox_emails(db: Session, limit: int = 5):
     try:
         Base.metadata.create_all(bind=engine)
     except Exception:
         pass
 
+    # Ensure default inbox account exists and is committed
     try:
         acc = db.query(InboxAccount).first()
         if not acc:
@@ -38,7 +41,15 @@ def sync_inbox_emails(db: Session, limit: int = 10):
             db.add(acc)
             db.commit()
             db.refresh(acc)
+    except Exception as e:
+        db.rollback()
+        acc = None
 
+    if not acc:
+        return
+
+    # Attempt IMAP sync with short timeout, catching any network/IMAP exceptions cleanly
+    try:
         plain_pass = decrypt_credential(acc.encrypted_password)
         service = IMAPService(
             host=acc.imap_host,
@@ -92,8 +103,7 @@ def sync_inbox_emails(db: Session, limit: int = 10):
             else:
                 WorkflowService.transition_state(db, email_rec, cta_status)
     except Exception as e:
-        db.rollback()
-        print(f"Sync note: {e}")
+        logger.warning(f"Background IMAP sync skipped: {e}")
 
 @router.get("/stats")
 def get_dashboard_metrics(db: Session = Depends(get_db)):
