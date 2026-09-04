@@ -26,12 +26,23 @@ def create_account(payload: InboxAccountCreate, db: Session = Depends(get_db)):
     except Exception:
         pass
 
-    existing = db.query(InboxAccount).filter(InboxAccount.email == payload.email).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Account with this email already exists.")
-
     try:
         enc_pass = encrypt_credential(payload.password)
+        existing = db.query(InboxAccount).filter(InboxAccount.email == payload.email).first()
+        if existing:
+            existing.username = payload.username
+            existing.encrypted_password = enc_pass
+            existing.imap_host = payload.imap_host
+            existing.imap_port = payload.imap_port
+            existing.smtp_host = payload.smtp_host
+            existing.smtp_port = payload.smtp_port
+            existing.use_ssl = payload.use_ssl
+            existing.folder = payload.folder
+            existing.is_active = True
+            db.commit()
+            db.refresh(existing)
+            return existing
+
         acc = InboxAccount(
             email=payload.email,
             imap_host=payload.imap_host,
@@ -50,7 +61,7 @@ def create_account(payload: InboxAccountCreate, db: Session = Depends(get_db)):
         return acc
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Failed to create inbox account: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to create or update inbox account: {str(e)}")
 
 @router.delete("/{account_id}")
 def delete_account(account_id: int, db: Session = Depends(get_db)):
