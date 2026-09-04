@@ -13,92 +13,91 @@ from app.services.workflow_service import WorkflowService
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
-def auto_sync_if_empty(db: Session):
+def sync_inbox_emails(db: Session, limit: int = 10):
     try:
         Base.metadata.create_all(bind=engine)
     except Exception:
         pass
 
     try:
-        if db.query(ProcessedEmail).count() == 0:
-            acc = db.query(InboxAccount).first()
-            if not acc:
-                enc_pass = encrypt_credential("meswfbzmtyaiczud")
-                acc = InboxAccount(
-                    email="aiwithtarun1@gmail.com",
-                    imap_host="imap.gmail.com",
-                    imap_port=993,
-                    smtp_host="smtp.gmail.com",
-                    smtp_port=587,
-                    username="aiwithtarun1@gmail.com",
-                    encrypted_password=enc_pass,
-                    use_ssl=True,
-                    folder="INBOX",
-                    is_active=True
-                )
-                db.add(acc)
-                db.commit()
-                db.refresh(acc)
-
-            plain_pass = decrypt_credential(acc.encrypted_password)
-            service = IMAPService(
-                host=acc.imap_host,
-                port=acc.imap_port,
-                username=acc.username,
-                password=plain_pass,
-                use_ssl=acc.use_ssl,
-                folder=acc.folder
+        acc = db.query(InboxAccount).first()
+        if not acc:
+            enc_pass = encrypt_credential("meswfbzmtyaiczud")
+            acc = InboxAccount(
+                email="aiwithtarun1@gmail.com",
+                imap_host="imap.gmail.com",
+                imap_port=993,
+                smtp_host="smtp.gmail.com",
+                smtp_port=587,
+                username="aiwithtarun1@gmail.com",
+                encrypted_password=enc_pass,
+                use_ssl=True,
+                folder="INBOX",
+                is_active=True
             )
-            messages = service.fetch_new_messages(limit=5)
-            for msg in messages:
-                is_dup = DeduplicationService.is_duplicate(db, acc.id, msg.message_id)
-                if is_dup:
-                    continue
+            db.add(acc)
+            db.commit()
+            db.refresh(acc)
 
-                email_rec = ProcessedEmail(
-                    correlation_id=str(uuid.uuid4()),
-                    account_id=acc.id,
-                    message_id=msg.message_id,
-                    thread_id=msg.thread_id,
-                    sender=msg.sender,
-                    recipient=msg.recipient or acc.email,
-                    subject=msg.subject,
-                    campaign_id=None,
-                    status="DETECTED",
-                    received_at=datetime.utcnow()
-                )
-                db.add(email_rec)
-                try:
-                    db.commit()
-                    db.refresh(email_rec)
-                except Exception:
-                    db.rollback()
-                    continue
+        plain_pass = decrypt_credential(acc.encrypted_password)
+        service = IMAPService(
+            host=acc.imap_host,
+            port=acc.imap_port,
+            username=acc.username,
+            password=plain_pass,
+            use_ssl=acc.use_ssl,
+            folder=acc.folder
+        )
+        messages = service.fetch_new_messages(limit=limit)
+        for msg in messages:
+            if DeduplicationService.is_duplicate(db, acc.id, msg.message_id):
+                continue
 
-                cta_url, cta_status = CTAService.extract_and_validate_cta(msg.html_body or "", msg.plain_body or "")
-                cta_log = CTALog(
-                    email_id=email_rec.id,
-                    url=cta_url or "",
-                    is_approved=(cta_status == "CTA_VALIDATED"),
-                    status="COMPLETED" if cta_url else cta_status
-                )
-                db.add(cta_log)
-                try:
-                    db.commit()
-                except Exception:
-                    db.rollback()
+            correlation_id = str(uuid.uuid4())
+            email_rec = ProcessedEmail(
+                correlation_id=correlation_id,
+                account_id=acc.id,
+                message_id=msg.message_id,
+                thread_id=msg.thread_id,
+                sender=msg.sender,
+                recipient=msg.recipient or acc.email,
+                subject=msg.subject,
+                campaign_id=None,
+                status="DETECTED",
+                received_at=msg.parsed_date or datetime.utcnow()
+            )
+            db.add(email_rec)
+            try:
+                db.commit()
+                db.refresh(email_rec)
+            except Exception:
+                db.rollback()
+                continue
 
-                if cta_url:
-                    WorkflowService.transition_state(db, email_rec, "CTA_CLICKED")
-                else:
-                    WorkflowService.transition_state(db, email_rec, cta_status)
+            cta_url, cta_status = CTAService.extract_and_validate_cta(msg.html_body or "", msg.plain_body or "")
+            cta_log = CTALog(
+                email_id=email_rec.id,
+                url=cta_url or "",
+                is_approved=(cta_status == "CTA_VALIDATED"),
+                status="COMPLETED" if cta_url else cta_status
+            )
+            db.add(cta_log)
+            try:
+                db.commit()
+            except Exception:
+                db.rollback()
+
+            if cta_url:
+                WorkflowService.transition_state(db, email_rec, "CTA_CLICKED")
+            else:
+                WorkflowService.transition_state(db, email_rec, cta_status)
     except Exception as e:
         db.rollback()
-        print(f"Auto sync note: {e}")
+        print(f"Sync note: {e}")
 
 @router.get("/stats")
 def get_dashboard_metrics(db: Session = Depends(get_db)):
-    auto_sync_if_empty(db)
+    sync_inbox_emails(db)
     total_detected = db.query(func.count(ProcessedEmail.id)).scalar() or 0
     
     status_counts = db.query(
@@ -136,7 +135,7 @@ def get_dashboard_metrics(db: Session = Depends(get_db)):
 
 @router.get("/activity")
 def get_recent_activity(limit: int = 20, db: Session = Depends(get_db)):
-    auto_sync_if_empty(db)
+    sync_inbox_emails(db)
     emails = db.query(ProcessedEmail).order_by(ProcessedEmail.id.desc()).limit(limit).all()
     result = []
     for e in emails:
