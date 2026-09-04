@@ -48,7 +48,8 @@ class IMAPService:
                 mail.logout()
                 return []
 
-            res, data = mail.search(None, 'UNSEEN')
+            # Fetch recent messages (ALL) and rely on deduplication
+            res, data = mail.search(None, 'ALL')
             if res != "OK" or not data[0]:
                 mail.logout()
                 return []
@@ -60,9 +61,6 @@ class IMAPService:
                     raw_mime = msg_data[0][1]
                     parsed = EmailParserService.parse_raw_mime(raw_mime, fallback_recipient=self.username)
                     parsed_emails.append(parsed)
-                    
-                    # Mark as seen
-                    mail.store(uid, '+FLAGS', r'(\Seen)')
 
             mail.logout()
         except Exception as e:

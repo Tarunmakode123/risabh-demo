@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     # Allowlists & Security Rules
     ALLOWED_SENDER_DOMAINS: str = "example.com,greenarrow.internal,arrowmail.internal,gmail.com"
     ALLOWED_RECIPIENT_DOMAINS: str = "test.example.com,internal.inbox,gmail.com"
-    ALLOWED_CTA_DOMAINS: str = "test.example.com,landing.arrowmail.internal,google.com,github.com,example.com"
+    ALLOWED_CTA_DOMAINS: str = "test.example.com,landing.arrowmail.internal,google.com,github.com,example.com,claude.ai"
 
     # Playwright Settings
     PLAYWRIGHT_HEADLESS: bool = True

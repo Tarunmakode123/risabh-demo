@@ -108,7 +108,7 @@ def sync_account_emails_now(account_id: int, db: Session = Depends(get_db)):
     )
 
     # Fetch new messages directly via IMAP
-    messages = service.fetch_new_messages(limit=10)
+    messages = service.fetch_new_messages(limit=15)
     synced_count = 0
 
     for msg in messages:
@@ -126,9 +126,9 @@ def sync_account_emails_now(account_id: int, db: Session = Depends(get_db)):
             sender=msg.sender,
             recipient=msg.recipient or acc.email,
             subject=msg.subject,
-            campaign_id=msg.campaign_id,
+            campaign_id=None,
             status="DETECTED",
-            received_at=msg.received_at or datetime.utcnow()
+            received_at=datetime.utcnow()
         )
         db.add(email_rec)
         try:
@@ -139,24 +139,24 @@ def sync_account_emails_now(account_id: int, db: Session = Depends(get_db)):
             continue
 
         # Extract & validate CTA
-        candidates = CTAService.extract_candidate_links(msg.html_body or msg.text_body or "")
-        best_cta, cta_status = CTAService.find_best_cta(candidates)
+        cta_url, cta_status = CTAService.extract_and_validate_cta(msg.html_body or "", msg.plain_body or "")
 
-        if best_cta:
-            is_app, app_reason = CTAService.validate_cta_domain(best_cta)
-            CTAService.log_cta_attempt(
-                db=db,
-                email_id=email_rec.id,
-                url=best_cta,
-                is_approved=is_app,
-                status="COMPLETED" if is_app else "BLOCKED"
-            )
-            if is_app:
-                WorkflowService.transition_state(db, email_rec, "CTA_CLICKED")
-            else:
-                WorkflowService.transition_state(db, email_rec, "CTA_BLOCKED", error_msg=app_reason)
+        cta_log = CTALog(
+            email_id=email_rec.id,
+            url=cta_url or "",
+            is_approved=(cta_status == "CTA_VALIDATED"),
+            status="COMPLETED" if cta_url else cta_status
+        )
+        db.add(cta_log)
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+
+        if cta_url:
+            WorkflowService.transition_state(db, email_rec, "CTA_CLICKED")
         else:
-            WorkflowService.transition_state(db, email_rec, "CTA_NOT_FOUND")
+            WorkflowService.transition_state(db, email_rec, cta_status)
 
         synced_count += 1
 
