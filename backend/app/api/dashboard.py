@@ -166,7 +166,7 @@ def get_dashboard_metrics(db: Session = Depends(get_db)):
     }
 
 @router.get("/activity")
-def get_recent_activity(limit: int = 20, db: Session = Depends(get_db)):
+def get_recent_activity(limit: int = 200, db: Session = Depends(get_db)):
     try:
         seed_default_activity(db)
     except Exception as e:

@@ -18,11 +18,11 @@ export default function ActivityTable({ activities, onSelectActivity, activeFilt
   const filteredActivities = activities.filter((act) => {
     // Stat Card filter
     if (activeFilter && activeFilter !== 'ALL') {
-      if (activeFilter === 'PROCESSED' && !['COMPLETED', 'REPLIED', 'CTA_CLICKED', 'CTA_VALIDATED'].includes(act.status)) return false;
+      if (activeFilter === 'PROCESSED' && ['IGNORED', 'DUPLICATE'].includes(act.status)) return false;
       if (activeFilter === 'CTA_FOUND' && !['CTA_FOUND', 'CTA_VALIDATED', 'CTA_CLICKED', 'REPLIED', 'COMPLETED'].includes(act.status)) return false;
       if (activeFilter === 'CTA_CLICKED' && !['CTA_CLICKED', 'REPLIED', 'COMPLETED'].includes(act.status)) return false;
       if (activeFilter === 'REPLIED' && !['REPLIED', 'COMPLETED'].includes(act.status)) return false;
-      if (activeFilter === 'CTA_BLOCKED' && act.status !== 'CTA_BLOCKED') return false;
+      if (activeFilter === 'CTA_BLOCKED' && !['CTA_BLOCKED', 'CTA_NOT_FOUND'].includes(act.status)) return false;
       if (activeFilter === 'ERROR' && !['ERROR', 'FAILED'].includes(act.status)) return false;
       if (activeFilter === 'IGNORED' && !['IGNORED', 'DUPLICATE'].includes(act.status)) return false;
     }
