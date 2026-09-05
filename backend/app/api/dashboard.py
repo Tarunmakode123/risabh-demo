@@ -194,8 +194,9 @@ def get_recent_activity(limit: int = 200, db: Session = Depends(get_db)):
     seen_keys = set()
     for e in emails:
         ts = e.received_at or e.created_at
+        ts_clean = ts.strftime("%Y-%m-%dT%H:%M:%S") if ts else ""
         ts_str = ts.isoformat() if ts else ""
-        dedup_key = f"{e.sender}|{e.subject}|{ts_str}"
+        dedup_key = f"{(e.sender or '').strip().lower()}|{(e.subject or '').strip().lower()}|{ts_clean}"
         if dedup_key in seen_keys:
             continue
         seen_keys.add(dedup_key)
