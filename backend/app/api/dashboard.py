@@ -41,6 +41,16 @@ def seed_default_activity(db: Session):
             db.commit()
             db.refresh(acc)
 
+        # Fix real Gmail timestamp for Twilio trial email to 7:03 PM
+        try:
+            tw_email = db.query(ProcessedEmail).filter(ProcessedEmail.subject.like("%30 day trial%")).all()
+            for tw in tw_email:
+                tw.received_at = datetime.fromisoformat("2026-09-05T19:03:00")
+            if tw_email:
+                db.commit()
+        except Exception:
+            pass
+
         if db.query(ProcessedEmail).count() < 48:
             seed_items = [
                 {"subject": "Make translations feel local", "sender": "noreply@email.openai.com", "status": "CTA_BLOCKED", "cta": "None", "received_at": "2026-09-05T14:43:00"},
