@@ -177,7 +177,7 @@ def get_recent_activity(limit: int = 200, db: Session = Depends(get_db)):
         logger.warning(f"Activity seed note: {e}")
 
     try:
-        emails = db.query(ProcessedEmail).order_by(ProcessedEmail.id.desc()).limit(limit).all()
+        emails = db.query(ProcessedEmail).order_by(ProcessedEmail.received_at.desc(), ProcessedEmail.id.desc()).limit(limit).all()
     except Exception:
         emails = []
 
