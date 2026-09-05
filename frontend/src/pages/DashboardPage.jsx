@@ -19,9 +19,25 @@ export default function DashboardPage() {
         API.get('/api/dashboard/stats'),
         API.get('/api/dashboard/activity')
       ]);
-      setStats(statsRes.data);
+
+      if (statsRes.data) {
+        setStats(prev => {
+          if (!prev) return statsRes.data;
+          if ((statsRes.data.emails_detected || 0) >= (prev.emails_detected || 0)) {
+            return statsRes.data;
+          }
+          return prev;
+        });
+      }
+
       if (actRes.data && actRes.data.length > 0) {
-        setActivities(actRes.data);
+        setActivities(prev => {
+          if (prev.length === 0) return actRes.data;
+          if (actRes.data.length >= prev.length) {
+            return actRes.data;
+          }
+          return prev;
+        });
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);

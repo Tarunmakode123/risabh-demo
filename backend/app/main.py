@@ -50,7 +50,7 @@ async def proxy_to_render_if_vercel(request: Request, call_next):
                 headers=req_headers,
                 method=request.method
             )
-            with urllib.request.urlopen(req, timeout=5) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:
                 resp_body = resp.read()
                 if resp_body.startswith(b'\x1f\x8b') or resp.headers.get("Content-Encoding") == "gzip":
                     import gzip
