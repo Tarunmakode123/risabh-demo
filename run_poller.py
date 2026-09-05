@@ -9,6 +9,8 @@ sys.path.insert(0, os.path.join(base_dir, "backend"))
 import time
 import uuid
 import logging
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from datetime import datetime, timezone
 from app.database import SessionLocal, engine, Base
 from app.models import InboxAccount, ProcessedEmail, CTALog, ReplyLog
@@ -222,11 +224,34 @@ def poll_and_process():
     finally:
         db.close()
 
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"OK")
+
+    def log_message(self, format, *args):
+        pass
+
+def start_health_server():
+    port = int(os.environ.get("PORT", 10000))
+    try:
+        server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
+        logger.info(f"Health check HTTP server listening on 0.0.0.0:{port}")
+        server.serve_forever()
+    except Exception as e:
+        logger.warning(f"Health server failed to start: {e}")
+
 if __name__ == "__main__":
     logger.info("==================================================")
     logger.info(" Starting Standalone Live Email Poller & Replier ")
     logger.info(" Press Ctrl+C to stop ")
     logger.info("==================================================")
+    
+    health_thread = threading.Thread(target=start_health_server, daemon=True)
+    health_thread.start()
+
     sync_all_existing_local_emails()
     while True:
         poll_and_process()
