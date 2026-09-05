@@ -47,7 +47,7 @@ def seed_default_activity(db: Session):
             for tw in tw_email:
                 tw.received_at = datetime.fromisoformat("2026-09-05T19:03:00")
             
-            cg_email = db.query(ProcessedEmail).filter(ProcessedEmail.subject.like("%CONGRATULATION%")).all()
+            cg_email = db.query(ProcessedEmail).filter((ProcessedEmail.sender.like("%garciajoyjj%")) | (ProcessedEmail.subject.like("%CONGRATULATION%"))).all()
             for cg in cg_email:
                 cg.received_at = datetime.fromisoformat("2026-09-05T20:31:00")
                 
