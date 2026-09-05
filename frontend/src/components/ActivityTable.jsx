@@ -39,6 +39,14 @@ export default function ActivityTable({ activities, onSelectActivity, activeFilt
     );
   });
 
+  // Strict Descending Timestamp Sort (Latest emails ALWAYS at the top)
+  const sortedActivities = [...filteredActivities].sort((a, b) => {
+    const tA = new Date(a.received_at || a.created_at || 0).getTime();
+    const tB = new Date(b.received_at || b.created_at || 0).getTime();
+    if (tA !== tB) return tB - tA;
+    return (b.id || 0) - (a.id || 0);
+  });
+
   const getStatusBadge = (status) => {
     let style = 'bg-slate-800 text-slate-300 border-slate-700';
     let Icon = Clock;
@@ -136,21 +144,21 @@ export default function ActivityTable({ activities, onSelectActivity, activeFilt
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60 font-sans">
-            {filteredActivities.length === 0 ? (
+            {sortedActivities.length === 0 ? (
               <tr>
                 <td colSpan="6" className="text-center py-8 text-slate-500">
                   No matching activity logs found for your search/filter criteria.
                 </td>
               </tr>
             ) : (
-              filteredActivities.map((act) => (
+              sortedActivities.map((act) => (
                 <tr
                   key={act.id}
                   onClick={() => onSelectActivity(act)}
                   className="group hover:bg-slate-800/80 transition-all duration-150 cursor-pointer"
                 >
                   <td className="p-3.5 pl-4 text-slate-400 font-mono text-[11px] whitespace-nowrap">
-                    {formatDate(act.created_at || act.received_at)}
+                    {formatDate(act.received_at || act.created_at)}
                   </td>
                   <td className="p-3.5 text-slate-200 font-medium whitespace-nowrap">
                     {act.inbox}
