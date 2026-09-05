@@ -30,9 +30,12 @@ def sync_email_activity(payload: EmailSyncPayload, db: Session = Depends(get_db)
         recv_dt = None
         if payload.received_at:
             try:
-                recv_dt = datetime.fromisoformat(payload.received_at.replace("Z", "+00:00"))
+                parsed_dt = datetime.fromisoformat(payload.received_at.replace("Z", "+00:00"))
+                recv_dt = parsed_dt.replace(tzinfo=None) if parsed_dt.tzinfo else parsed_dt
             except Exception:
-                recv_dt = datetime.now(timezone.utc)
+                recv_dt = datetime.utcnow()
+        else:
+            recv_dt = datetime.utcnow()
 
         existing = db.query(ProcessedEmail).filter(ProcessedEmail.correlation_id == payload.correlation_id).first()
         if existing:

@@ -137,10 +137,13 @@ def poll_and_process():
                     recipient=msg.recipient or acc.email,
                     subject=msg.subject,
                     status="DETECTED",
-                    received_at=msg.parsed_date or datetime.now(timezone.utc)
+                    received_at=msg.parsed_date or datetime.utcnow()
                 )
                 db.add(email_rec)
-                rec_ts = (email_rec.received_at or datetime.now(timezone.utc)).isoformat()
+                ts = email_rec.received_at or datetime.utcnow()
+                if ts.tzinfo:
+                    ts = ts.replace(tzinfo=None)
+                rec_ts = ts.isoformat()
                 try:
                     db.commit()
                     db.refresh(email_rec)
