@@ -39,8 +39,9 @@ async def proxy_to_render_if_vercel(request: Request, call_next):
             if request.url.query:
                 target_url += f"?{request.url.query}"
 
-            req_headers = {k: v for k, v in request.headers.items() if k.lower() not in ["host", "content-length"]}
+            req_headers = {k: v for k, v in request.headers.items() if k.lower() not in ["host", "content-length", "accept-encoding"]}
             req_headers["x-proxied-from-vercel"] = "1"
+            req_headers["accept-encoding"] = "identity"
 
             body = await request.body()
             req = urllib.request.Request(
@@ -51,11 +52,16 @@ async def proxy_to_render_if_vercel(request: Request, call_next):
             )
             with urllib.request.urlopen(req, timeout=5) as resp:
                 resp_body = resp.read()
-                resp_headers = dict(resp.headers)
+                if resp.headers.get("Content-Encoding") == "gzip":
+                    import gzip
+                    try:
+                        resp_body = gzip.decompress(resp_body)
+                    except Exception:
+                        pass
                 return Response(
                     content=resp_body,
                     status_code=resp.status,
-                    media_type=resp_headers.get("content-type", "application/json")
+                    media_type="application/json"
                 )
         except Exception as e:
             print(f"Proxy to Render note: {e}")
