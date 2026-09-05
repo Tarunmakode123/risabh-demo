@@ -179,7 +179,7 @@ export default function LogDetailModal({ activity, onClose }) {
               </span>
             </div>
             <p className="text-xs font-mono text-cyan-300 bg-slate-950 p-2.5 rounded-lg border border-slate-800 break-all">
-              {activity.cta_url || 'https://google.com (Extracted from body)'}
+              {activity.cta_url ? activity.cta_url : 'No Call-to-Action link found in email body'}
             </p>
           </div>
 
