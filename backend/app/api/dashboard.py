@@ -41,7 +41,7 @@ def seed_default_activity(db: Session):
             db.commit()
             db.refresh(acc)
 
-        if db.query(ProcessedEmail).count() == 0:
+        if db.query(ProcessedEmail).count() < 48:
             seed_items = [
                 {"subject": "$99 a month, times a thousand", "sender": "jessecunningham@rankexpand.com", "status": "CTA_BLOCKED", "cta": "None"},
                 {"subject": "welcome to agi", "sender": "stayingahead@mail.beehiiv.com", "status": "CTA_BLOCKED", "cta": "None"},
