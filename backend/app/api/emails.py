@@ -1,12 +1,62 @@
 from typing import List, Optional
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import ProcessedEmail, CTALog, ReplyLog
+from ..models import ProcessedEmail, CTALog, ReplyLog, InboxAccount
 from ..schemas import ProcessedEmailOut, CTALogOut, ReplyLogOut
 from .dashboard import seed_default_activity
 
 router = APIRouter(prefix="/api/emails", tags=["Processed Emails"])
+
+class EmailSyncPayload(BaseModel):
+    correlation_id: str
+    sender: str
+    recipient: Optional[str] = "aiwithtarun1@gmail.com"
+    subject: str
+    status: str
+    cta_url: Optional[str] = None
+
+@router.post("/sync")
+def sync_email_activity(payload: EmailSyncPayload, db: Session = Depends(get_db)):
+    try:
+        seed_default_activity(db)
+        acc = db.query(InboxAccount).first()
+        acc_id = acc.id if acc else 1
+        
+        existing = db.query(ProcessedEmail).filter(ProcessedEmail.correlation_id == payload.correlation_id).first()
+        if existing:
+            existing.status = payload.status
+            db.commit()
+            return {"status": "updated", "id": existing.id}
+        
+        new_email = ProcessedEmail(
+            correlation_id=payload.correlation_id,
+            account_id=acc_id,
+            message_id=f"{payload.correlation_id}@mail.gmail.com",
+            sender=payload.sender,
+            recipient=payload.recipient or "aiwithtarun1@gmail.com",
+            subject=payload.subject,
+            status=payload.status,
+        )
+        db.add(new_email)
+        db.commit()
+        db.refresh(new_email)
+
+        if payload.cta_url:
+            cta = CTALog(
+                email_id=new_email.id,
+                url=payload.cta_url,
+                is_approved=payload.status in ["CTA_CLICKED", "COMPLETED"],
+                status="COMPLETED" if payload.cta_url else payload.status
+            )
+            db.add(cta)
+            db.commit()
+
+        return {"status": "synced", "id": new_email.id}
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "detail": str(e)}
 
 @router.get("", response_model=List[ProcessedEmailOut])
 def list_processed_emails(
@@ -34,3 +84,4 @@ def get_cta_logs(email_id: int, db: Session = Depends(get_db)):
 @router.get("/{email_id}/reply-logs", response_model=List[ReplyLogOut])
 def get_reply_logs(email_id: int, db: Session = Depends(get_db)):
     return db.query(ReplyLog).filter(ReplyLog.email_id == email_id).all()
+

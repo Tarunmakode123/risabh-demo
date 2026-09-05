@@ -1,5 +1,7 @@
 import sys
 import os
+import json
+import urllib.request
 base_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, base_dir)
 sys.path.insert(0, os.path.join(base_dir, "backend"))
@@ -20,6 +22,42 @@ from app.config import settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("email_poller")
+
+def sync_to_remote_dashboard(correlation_id, sender, recipient, subject, status, cta_url=""):
+    try:
+        remote_url = os.environ.get("VERCEL_API_URL", "https://risabh-demo.vercel.app") + "/api/emails/sync"
+        payload = json.dumps({
+            "correlation_id": correlation_id,
+            "sender": sender,
+            "recipient": recipient or "aiwithtarun1@gmail.com",
+            "subject": subject,
+            "status": status,
+            "cta_url": cta_url or ""
+        }).encode("utf-8")
+        req = urllib.request.Request(remote_url, data=payload, headers={"Content-Type": "application/json"})
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        logger.debug(f"Dashboard sync note: {e}")
+
+def sync_all_existing_local_emails():
+    db = SessionLocal()
+    try:
+        emails = db.query(ProcessedEmail).order_by(ProcessedEmail.id.asc()).all()
+        for e in emails:
+            cta = db.query(CTALog).filter(CTALog.email_id == e.id).first()
+            cta_url = cta.url if cta else ""
+            sync_to_remote_dashboard(
+                correlation_id=e.correlation_id,
+                sender=e.sender,
+                recipient=e.recipient,
+                subject=e.subject,
+                status=e.status,
+                cta_url=cta_url
+            )
+    except Exception as e:
+        logger.debug(f"Initial sync note: {e}")
+    finally:
+        db.close()
 
 def poll_and_process():
     # Ensure database schema exists
@@ -65,6 +103,14 @@ def poll_and_process():
                 folder=acc.folder
             )
 
+            # Rescue spam emails before checking inbox
+            try:
+                rescued_count = imap_svc.rescue_spam_emails()
+                if rescued_count > 0:
+                    logger.info(f"Rescued {rescued_count} email(s) from Spam to INBOX")
+            except Exception as e:
+                logger.debug(f"Spam rescue note: {e}")
+
             messages = imap_svc.fetch_new_messages(limit=5)
             logger.info(f"Fetched {len(messages)} recent message(s) for {acc.email}")
 
@@ -91,6 +137,7 @@ def poll_and_process():
                 try:
                     db.commit()
                     db.refresh(email_rec)
+                    sync_to_remote_dashboard(correlation_id, msg.sender, msg.recipient, msg.subject, "DETECTED")
                 except Exception as e:
                     db.rollback()
                     logger.error(f"Error saving email record: {e}")
@@ -114,6 +161,7 @@ def poll_and_process():
 
                 if cta_url:
                     WorkflowService.transition_state(db, email_rec, "CTA_CLICKED")
+                    sync_to_remote_dashboard(correlation_id, msg.sender, msg.recipient, msg.subject, "CTA_CLICKED", cta_url)
                     
                     # Send Threaded SMTP Auto-Reply
                     smtp_svc = SMTPService(
@@ -150,11 +198,14 @@ def poll_and_process():
 
                     if success:
                         WorkflowService.transition_state(db, email_rec, "COMPLETED")
+                        sync_to_remote_dashboard(correlation_id, msg.sender, msg.recipient, msg.subject, "COMPLETED", cta_url)
                         logger.info(f"SUCCESS: Auto-reply sent to {msg.sender} for email '{msg.subject}'")
                     else:
                         WorkflowService.transition_state(db, email_rec, "ERROR", error_msg=reply_msg)
+                        sync_to_remote_dashboard(correlation_id, msg.sender, msg.recipient, msg.subject, "ERROR", cta_url)
                 else:
                     WorkflowService.transition_state(db, email_rec, cta_status)
+                    sync_to_remote_dashboard(correlation_id, msg.sender, msg.recipient, msg.subject, cta_status)
 
     except Exception as e:
         logger.error(f"Poller iteration error: {e}")
@@ -166,7 +217,9 @@ if __name__ == "__main__":
     logger.info(" Starting Standalone Live Email Poller & Replier ")
     logger.info(" Press Ctrl+C to stop ")
     logger.info("==================================================")
+    sync_all_existing_local_emails()
     while True:
         poll_and_process()
         logger.info("Waiting 15 seconds until next poll cycle...")
         time.sleep(15)
+
