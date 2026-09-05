@@ -1,0 +1,12 @@
+services:
+  - type: worker
+    name: arrowmail-poller-worker
+    env: python
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run_poller.py
+    envVars:
+      - key: VERCEL_API_URL
+        value: https://risabh-demo.vercel.app
+      - key: PYTHON_VERSION
+        value: 3.11.0
