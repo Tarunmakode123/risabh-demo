@@ -94,12 +94,21 @@ def seed_default_activity(db: Session):
             ]
 
             for idx, item in enumerate(seed_items):
-                c_id = str(uuid.uuid4())
-                m_id = f"{uuid.uuid4()}@mail.gmail.com"
                 try:
                     recv_dt = datetime.fromisoformat(item["received_at"])
                 except Exception:
                     recv_dt = datetime.utcnow()
+
+                dup_check = db.query(ProcessedEmail).filter(
+                    ProcessedEmail.subject == item["subject"],
+                    ProcessedEmail.sender == item["sender"],
+                    ProcessedEmail.received_at == recv_dt
+                ).first()
+                if dup_check:
+                    continue
+
+                c_id = str(uuid.uuid4())
+                m_id = f"{uuid.uuid4()}@mail.gmail.com"
                 pe = ProcessedEmail(
                     correlation_id=c_id,
                     account_id=acc.id,
@@ -182,8 +191,14 @@ def get_recent_activity(limit: int = 200, db: Session = Depends(get_db)):
         emails = []
 
     result = []
+    seen_keys = set()
     for e in emails:
         ts = e.received_at or e.created_at
+        ts_str = ts.isoformat() if ts else ""
+        dedup_key = f"{e.sender}|{e.subject}|{ts_str}"
+        if dedup_key in seen_keys:
+            continue
+        seen_keys.add(dedup_key)
         result.append({
             "id": e.id,
             "correlation_id": e.correlation_id,
@@ -191,10 +206,10 @@ def get_recent_activity(limit: int = 200, db: Session = Depends(get_db)):
             "sender": e.sender,
             "recipient": e.recipient,
             "subject": e.subject or "(No Subject)",
-            "received_at": ts.isoformat() if ts else "",
+            "received_at": ts_str,
             "opened_at": e.opened_at.isoformat() if e.opened_at else "-",
             "status": e.status,
             "error_message": e.error_message or "",
-            "created_at": ts.isoformat() if ts else ""
+            "created_at": ts_str
         })
     return result
