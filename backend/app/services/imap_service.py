@@ -78,7 +78,7 @@ class IMAPService:
 
         return rescued
 
-    def fetch_new_messages(self, limit: int = 15) -> List[ParsedEmailData]:
+    def fetch_new_messages(self, limit: int = 30) -> List[ParsedEmailData]:
         parsed_emails: List[ParsedEmailData] = []
         try:
             mail = self.connect()

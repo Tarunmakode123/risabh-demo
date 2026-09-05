@@ -119,7 +119,7 @@ def poll_and_process():
             except Exception as e:
                 logger.debug(f"Spam rescue note: {e}")
 
-            messages = imap_svc.fetch_new_messages(limit=5)
+            messages = imap_svc.fetch_new_messages(limit=30)
             logger.info(f"Fetched {len(messages)} recent message(s) for {acc.email}")
 
             for msg in messages:
