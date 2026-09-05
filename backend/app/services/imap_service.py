@@ -87,18 +87,28 @@ class IMAPService:
             spam_rescued = self.rescue_spam_emails(mail, limit=limit)
             parsed_emails.extend(spam_rescued)
 
-            # Second: Fetch messages from target INBOX
-            res, _ = mail.select(f'"{self.folder}"', readonly=False)
-            if res == "OK":
-                res, data = mail.search(None, 'ALL')
-                if res == "OK" and data[0]:
-                    uids = data[0].split()
-                    for uid in uids[-limit:]:
-                        res, msg_data = mail.fetch(uid, '(BODY.PEEK[])')
-                        if res == "OK" and msg_data and msg_data[0]:
-                            raw_mime = msg_data[0][1]
-                            parsed = EmailParserService.parse_raw_mime(raw_mime, fallback_recipient=self.username)
-                            parsed_emails.append(parsed)
+            # Second: Fetch messages from INBOX and [Gmail]/All Mail (captures Updates, Promotions, Primary)
+            target_folders = []
+            if "gmail" in self.host.lower() or "gmail" in self.username.lower():
+                target_folders.append('"[Gmail]/All Mail"')
+            target_folders.append(f'"{self.folder}"')
+
+            for f_name in target_folders:
+                try:
+                    res, _ = mail.select(f_name, readonly=False)
+                    if res == "OK":
+                        res, data = mail.search(None, 'ALL')
+                        if res == "OK" and data[0]:
+                            uids = data[0].split()
+                            for uid in uids[-limit:]:
+                                res, msg_data = mail.fetch(uid, '(BODY.PEEK[])')
+                                if res == "OK" and msg_data and msg_data[0]:
+                                    raw_mime = msg_data[0][1]
+                                    parsed = EmailParserService.parse_raw_mime(raw_mime, fallback_recipient=self.username)
+                                    parsed_emails.append(parsed)
+                            break
+                except Exception as e:
+                    logger.debug(f"IMAP folder select note '{f_name}': {e}")
 
             mail.logout()
         except Exception as e:
