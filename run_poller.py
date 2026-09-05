@@ -178,10 +178,10 @@ def poll_and_process():
                     # Send Threaded SMTP Auto-Reply
                     smtp_svc = SMTPService(
                         host=acc.smtp_host,
-                        port=acc.smtp_port,
+                        port=465 if "gmail" in acc.smtp_host.lower() else acc.smtp_port,
                         username=acc.username,
                         password=plain_pass,
-                        use_ssl=False
+                        use_ssl=True if "gmail" in acc.smtp_host.lower() else acc.use_ssl
                     )
                     reply_body = f"Thanks for sharing this! Received your email regarding '{msg.subject}'."
                     success, reply_msg = smtp_svc.send_threaded_reply(

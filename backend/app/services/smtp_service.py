@@ -25,11 +25,15 @@ class SMTPService:
         if self.use_ssl or self.port == 465:
             server = smtplib.SMTP_SSL(self.host, self.port, timeout=15)
         else:
-            server = smtplib.SMTP(self.host, self.port, timeout=15)
-            server.ehlo()
-            if server.has_extn("STARTTLS"):
-                server.starttls()
+            try:
+                server = smtplib.SMTP(self.host, self.port, timeout=10)
                 server.ehlo()
+                if server.has_extn("STARTTLS"):
+                    server.starttls()
+                    server.ehlo()
+            except Exception as e:
+                logger.info(f"Port {self.port} connection note ({e}). Falling back to SMTP_SSL port 465...")
+                server = smtplib.SMTP_SSL(self.host, 465, timeout=15)
 
         server.login(self.username, self.password)
         return server
