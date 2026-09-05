@@ -140,10 +140,11 @@ def poll_and_process():
                     received_at=msg.parsed_date or datetime.now(timezone.utc)
                 )
                 db.add(email_rec)
+                rec_ts = (email_rec.received_at or datetime.now(timezone.utc)).isoformat()
                 try:
                     db.commit()
                     db.refresh(email_rec)
-                    sync_to_remote_dashboard(correlation_id, msg.sender, msg.recipient, msg.subject, "DETECTED")
+                    sync_to_remote_dashboard(correlation_id, msg.sender, msg.recipient, msg.subject, "DETECTED", received_at=rec_ts)
                 except Exception as e:
                     db.rollback()
                     logger.error(f"Error saving email record: {e}")
@@ -167,7 +168,7 @@ def poll_and_process():
 
                 if cta_url:
                     WorkflowService.transition_state(db, email_rec, "CTA_CLICKED")
-                    sync_to_remote_dashboard(correlation_id, msg.sender, msg.recipient, msg.subject, "CTA_CLICKED", cta_url)
+                    sync_to_remote_dashboard(correlation_id, msg.sender, msg.recipient, msg.subject, "CTA_CLICKED", cta_url, received_at=rec_ts)
                     
                     # Send Threaded SMTP Auto-Reply
                     smtp_svc = SMTPService(
@@ -204,14 +205,14 @@ def poll_and_process():
 
                     if success:
                         WorkflowService.transition_state(db, email_rec, "COMPLETED")
-                        sync_to_remote_dashboard(correlation_id, msg.sender, msg.recipient, msg.subject, "COMPLETED", cta_url)
+                        sync_to_remote_dashboard(correlation_id, msg.sender, msg.recipient, msg.subject, "COMPLETED", cta_url, received_at=rec_ts)
                         logger.info(f"SUCCESS: Auto-reply sent to {msg.sender} for email '{msg.subject}'")
                     else:
                         WorkflowService.transition_state(db, email_rec, "ERROR", error_msg=reply_msg)
-                        sync_to_remote_dashboard(correlation_id, msg.sender, msg.recipient, msg.subject, "ERROR", cta_url)
+                        sync_to_remote_dashboard(correlation_id, msg.sender, msg.recipient, msg.subject, "ERROR", cta_url, received_at=rec_ts)
                 else:
                     WorkflowService.transition_state(db, email_rec, cta_status)
-                    sync_to_remote_dashboard(correlation_id, msg.sender, msg.recipient, msg.subject, cta_status)
+                    sync_to_remote_dashboard(correlation_id, msg.sender, msg.recipient, msg.subject, cta_status, received_at=rec_ts)
 
     except Exception as e:
         logger.error(f"Poller iteration error: {e}")
