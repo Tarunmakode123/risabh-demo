@@ -52,7 +52,7 @@ async def proxy_to_render_if_vercel(request: Request, call_next):
             )
             with urllib.request.urlopen(req, timeout=5) as resp:
                 resp_body = resp.read()
-                if resp.headers.get("Content-Encoding") == "gzip":
+                if resp_body.startswith(b'\x1f\x8b') or resp.headers.get("Content-Encoding") == "gzip":
                     import gzip
                     try:
                         resp_body = gzip.decompress(resp_body)
@@ -61,7 +61,7 @@ async def proxy_to_render_if_vercel(request: Request, call_next):
                 return Response(
                     content=resp_body,
                     status_code=resp.status,
-                    media_type="application/json"
+                    media_type="application/json; charset=utf-8"
                 )
         except Exception as e:
             print(f"Proxy to Render note: {e}")
