@@ -43,36 +43,54 @@ def seed_default_activity(db: Session):
 
         if db.query(ProcessedEmail).count() == 0:
             seed_items = [
-                {
-                    "subject": "QA Test 1 - Approved Link",
-                    "sender": "tarunkumarmakode123@gmail.com",
-                    "status": "CTA_CLICKED",
-                    "cta": "https://google.com"
-                },
-                {
-                    "subject": "Test Email 3",
-                    "sender": "tarunkumarmakode123@gmail.com",
-                    "status": "COMPLETED",
-                    "cta": "https://google.com"
-                },
-                {
-                    "subject": "Testing ArrowMail Automation",
-                    "sender": "tarunkumarmakode123@gmail.com",
-                    "status": "CTA_CLICKED",
-                    "cta": "https://google.com"
-                },
-                {
-                    "subject": "Test Warmup Email",
-                    "sender": "tarunkumarmakode123@gmail.com",
-                    "status": "CTA_BLOCKED",
-                    "cta": "None"
-                },
-                {
-                    "subject": "Security alert",
-                    "sender": "no-reply@accounts.google.com",
-                    "status": "CTA_BLOCKED",
-                    "cta": "None"
-                }
+                {"subject": "$99 a month, times a thousand", "sender": "jessecunningham@rankexpand.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "welcome to agi", "sender": "stayingahead@mail.beehiiv.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Security alert", "sender": "no-reply@accounts.google.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Test Warmup Email", "sender": "tarunkumarmakode123@gmail.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "vuvu", "sender": "tarunkumarmakode123@gmail.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Testing ArrowMail Automation", "sender": "tarunkumarmakode123@gmail.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Testing ArrowMail Automation", "sender": "tarunkumarmakode123@gmail.com", "status": "CTA_CLICKED", "cta": "https://google.com"},
+                {"subject": "Test Email 3", "sender": "tarunkumarmakode123@gmail.com", "status": "COMPLETED", "cta": "https://google.com"},
+                {"subject": "[SalesViral.com] – Your Next Growth Brand Starts Here", "sender": "ameerabusaada19992@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "Urgent Attention Needed", "sender": "stevenarcher388@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "Technical Trainer at IKIGAI SCHOOL OF AI", "sender": "donotreply@jobalert.indeed.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "QA Test 1 - Approved Link", "sender": "tarunkumarmakode123@gmail.com", "status": "COMPLETED", "cta": "https://google.com"},
+                {"subject": "AI Engineer @ Drytis", "sender": "donotreply@match.indeed.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Save $300 on any new auto warranty purchase", "sender": "info@elitedigitalframeworks.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "What's your goal for your book Aiwithtarun??", "sender": "honourempyron@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "Save big on your home warranty policy today", "sender": "info@leadblasterhub.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Retell Workflows, Brex top 25, and more", "sender": "hello@info.retellai.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Project Documentation Update", "sender": "tarunkumarmakode123@gmail.com", "status": "COMPLETED", "cta": "http://github.com"},
+                {"subject": "Confidential Business Proposal", "sender": "shoaibmirhashem@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "Save up to 70% on your new roof", "sender": "info@mailboostmarketing.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "A simple path out of credit card debt", "sender": "info@mailboostmarketing.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Investment Partnership!", "sender": "if.folquett@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "Curious question about your model", "sender": "michaelogunleye127@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "We provide Project & Business Financing", "sender": "mikolasova@zs-loucen.cz", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "Weekly Product Newsletter", "sender": "tarunkumarmakode123@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "Get a brand-new roof without breaking the bank", "sender": "info@clickcampaignhub.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Regarding Business Funds...", "sender": "higherceilingslimited@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "Email Verification!!!", "sender": "info@jag-petroleum.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "Your Profile Has Been Shortlisted | Adobe X Krutanic Internship Program 2026", "sender": "shreya@adobe-edu.in", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Remote Services", "sender": "mtbaig911@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "Home Improvement or Debt Consolidation? Unlock your equity today", "sender": "info@mailboostmarketing.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "$$$ CONGRATULATIONS URGENT WINNER $$$", "sender": "tarunkumarmakode123@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "Dear Beloved,", "sender": "lettepencer@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "hi", "sender": "shuzoliver@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "Don't overpay for home repairs—claim your discount", "sender": "info@marketupdateshub.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Greeting,", "sender": "info@lebanauctionyard.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "Hello", "sender": "aburewaldemar1@gmail.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Don't miss out: happy hour + events", "sender": "hello@events.retellai.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Schedule Your Onboarding Session", "sender": "tarunkumarmakode123@gmail.com", "status": "COMPLETED", "cta": "https://claude.ai"},
+                {"subject": "Don’t Let $10k in Debt Grow — Here’s Help", "sender": "info@dominateyourmarketonline.shop", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Compare Vehicle Protection Plans for Your Car", "sender": "info@advancedemailmarketingpro.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "External Resource Verification", "sender": "tarunkumarmakode123@gmail.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Limited offer - $300 off Endurance warranty purchase🚗", "sender": "info@elitedigitalframeworks.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Re: Project Proposal Discussion", "sender": "mail.georges.elhedery.b@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "(No Subject)", "sender": "mamudrasheed916@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "Complete Your Debt Resolution Application", "sender": "info@mailboostmarketing.com", "status": "CTA_BLOCKED", "cta": "None"},
+                {"subject": "Inquiry about service pricing and plans", "sender": "tarunkumarmakode123@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"},
+                {"subject": "Acknowledged your profile", "sender": "georgeselhedery963@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"}
             ]
 
             for item in seed_items:
