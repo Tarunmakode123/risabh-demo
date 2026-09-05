@@ -1,6 +1,6 @@
 import uuid
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -93,7 +93,7 @@ def seed_default_activity(db: Session):
                 {"subject": "Acknowledged your profile", "sender": "georgeselhedery963@gmail.com", "status": "CTA_NOT_FOUND", "cta": "None"}
             ]
 
-            for item in seed_items:
+            for idx, item in enumerate(seed_items):
                 c_id = str(uuid.uuid4())
                 m_id = f"{uuid.uuid4()}@mail.gmail.com"
                 pe = ProcessedEmail(
@@ -105,7 +105,7 @@ def seed_default_activity(db: Session):
                     recipient=acc.email,
                     subject=item["subject"],
                     status=item["status"],
-                    received_at=datetime.utcnow()
+                    received_at=datetime.utcnow() - timedelta(minutes=idx * 3)
                 )
                 db.add(pe)
                 try:

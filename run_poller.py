@@ -23,17 +23,20 @@ from app.config import settings
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("email_poller")
 
-def sync_to_remote_dashboard(correlation_id, sender, recipient, subject, status, cta_url=""):
+def sync_to_remote_dashboard(correlation_id, sender, recipient, subject, status, cta_url="", received_at=None):
     try:
         remote_url = os.environ.get("VERCEL_API_URL", "https://risabh-demo.vercel.app") + "/api/emails/sync"
-        payload = json.dumps({
+        payload_dict = {
             "correlation_id": correlation_id,
             "sender": sender,
             "recipient": recipient or "aiwithtarun1@gmail.com",
             "subject": subject,
             "status": status,
             "cta_url": cta_url or ""
-        }).encode("utf-8")
+        }
+        if received_at:
+            payload_dict["received_at"] = received_at
+        payload = json.dumps(payload_dict).encode("utf-8")
         req = urllib.request.Request(remote_url, data=payload, headers={"Content-Type": "application/json"})
         urllib.request.urlopen(req, timeout=5)
     except Exception as e:
@@ -46,13 +49,16 @@ def sync_all_existing_local_emails():
         for e in emails:
             cta = db.query(CTALog).filter(CTALog.email_id == e.id).first()
             cta_url = cta.url if cta else ""
+            ts = e.received_at or e.created_at
+            ts_str = ts.isoformat() if ts else None
             sync_to_remote_dashboard(
                 correlation_id=e.correlation_id,
                 sender=e.sender,
                 recipient=e.recipient,
                 subject=e.subject,
                 status=e.status,
-                cta_url=cta_url
+                cta_url=cta_url,
+                received_at=ts_str
             )
     except Exception as e:
         logger.debug(f"Initial sync note: {e}")

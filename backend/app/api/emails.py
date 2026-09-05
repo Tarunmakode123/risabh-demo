@@ -9,6 +9,8 @@ from .dashboard import seed_default_activity
 
 router = APIRouter(prefix="/api/emails", tags=["Processed Emails"])
 
+from datetime import datetime, timezone
+
 class EmailSyncPayload(BaseModel):
     correlation_id: str
     sender: str
@@ -16,6 +18,7 @@ class EmailSyncPayload(BaseModel):
     subject: str
     status: str
     cta_url: Optional[str] = None
+    received_at: Optional[str] = None
 
 @router.post("/sync")
 def sync_email_activity(payload: EmailSyncPayload, db: Session = Depends(get_db)):
@@ -24,9 +27,18 @@ def sync_email_activity(payload: EmailSyncPayload, db: Session = Depends(get_db)
         acc = db.query(InboxAccount).first()
         acc_id = acc.id if acc else 1
         
+        recv_dt = None
+        if payload.received_at:
+            try:
+                recv_dt = datetime.fromisoformat(payload.received_at.replace("Z", "+00:00"))
+            except Exception:
+                recv_dt = datetime.now(timezone.utc)
+
         existing = db.query(ProcessedEmail).filter(ProcessedEmail.correlation_id == payload.correlation_id).first()
         if existing:
             existing.status = payload.status
+            if recv_dt:
+                existing.received_at = recv_dt
             db.commit()
             return {"status": "updated", "id": existing.id}
         
@@ -38,6 +50,7 @@ def sync_email_activity(payload: EmailSyncPayload, db: Session = Depends(get_db)
             recipient=payload.recipient or "aiwithtarun1@gmail.com",
             subject=payload.subject,
             status=payload.status,
+            received_at=recv_dt or datetime.now(timezone.utc)
         )
         db.add(new_email)
         db.commit()
