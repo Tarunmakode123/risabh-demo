@@ -156,7 +156,7 @@ def sync_account_emails_now(account_id: int, db: Session = Depends(get_db)):
     )
 
     # Fetch new messages directly via IMAP (fast limit=5 for serverless response time)
-    messages = service.fetch_new_messages(limit=5)
+    messages = service.fetch_new_messages(limit=30)
     synced_count = 0
 
     for msg in messages:
