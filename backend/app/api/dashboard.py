@@ -41,12 +41,17 @@ def seed_default_activity(db: Session):
             db.commit()
             db.refresh(acc)
 
-        # Fix real Gmail timestamp for Twilio trial email to 7:03 PM
+        # Fix real Gmail timestamps for Twilio trial email (7:03 PM) and CONGRATULATION email (8:31 PM)
         try:
             tw_email = db.query(ProcessedEmail).filter(ProcessedEmail.subject.like("%30 day trial%")).all()
             for tw in tw_email:
                 tw.received_at = datetime.fromisoformat("2026-09-05T19:03:00")
-            if tw_email:
+            
+            cg_email = db.query(ProcessedEmail).filter(ProcessedEmail.subject.like("%CONGRATULATION%")).all()
+            for cg in cg_email:
+                cg.received_at = datetime.fromisoformat("2026-09-05T20:31:00")
+                
+            if tw_email or cg_email:
                 db.commit()
         except Exception:
             pass
