@@ -224,24 +224,15 @@ def poll_and_process():
     finally:
         db.close()
 
-class HealthCheckHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-Type", "text/plain")
-        self.end_headers()
-        self.wfile.write(b"OK")
-
-    def log_message(self, format, *args):
-        pass
+import uvicorn
 
 def start_health_server():
     port = int(os.environ.get("PORT", 10000))
     try:
-        server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
-        logger.info(f"Health check HTTP server listening on 0.0.0.0:{port}")
-        server.serve_forever()
+        logger.info(f"Starting FastAPI web backend on 0.0.0.0:{port}...")
+        uvicorn.run("app.main:app", host="0.0.0.0", port=port, log_level="warning")
     except Exception as e:
-        logger.warning(f"Health server failed to start: {e}")
+        logger.warning(f"FastAPI server start note: {e}")
 
 if __name__ == "__main__":
     logger.info("==================================================")
