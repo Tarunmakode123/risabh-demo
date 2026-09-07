@@ -55,7 +55,7 @@ def seed_default_activity(db: Session):
             for win in win_email:
                 win.received_at = datetime.fromisoformat("2026-09-05T11:53:38")
 
-            old_errors = db.query(ProcessedEmail).filter(ProcessedEmail.error_message.like("%[Errno 101]%")).all()
+            old_errors = db.query(ProcessedEmail).filter(ProcessedEmail.status == "ERROR").all()
             for oe in old_errors:
                 oe.status = "CTA_NOT_FOUND"
                 oe.error_message = ""
