@@ -51,19 +51,15 @@ def seed_default_activity(db: Session):
             for cg in cg_email:
                 cg.received_at = datetime.fromisoformat("2026-09-05T20:31:00")
                 
-            win_email = db.query(ProcessedEmail).filter(ProcessedEmail.subject.like("%URGENT WINNER%")).all()
-            for win in win_email:
-                win.received_at = datetime.fromisoformat("2026-09-05T11:53:38")
-
+        try:
             old_errors = db.query(ProcessedEmail).filter(ProcessedEmail.error_message.like("%[Errno 101]%")).all()
             for oe in old_errors:
-                oe.status = "CTA_NOT_FOUND" if not oe.cta_logs or not oe.cta_logs[0].url or oe.cta_logs[0].url == "None" else "COMPLETED"
+                oe.status = "CTA_NOT_FOUND"
                 oe.error_message = ""
-
-            if tw_email or cg_email or win_email or old_errors:
+            if old_errors:
                 db.commit()
-        except Exception:
-            pass
+        except Exception as ex:
+            logger.warning(f"Cleanup note: {ex}")
 
         if db.query(ProcessedEmail).count() < 48:
             seed_items = [
