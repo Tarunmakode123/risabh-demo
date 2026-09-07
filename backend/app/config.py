@@ -24,10 +24,10 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # Security & Encryption
-    JWT_SECRET: str = "supersecretjwtkey_arrowmail_2026_change_in_production"
+    JWT_SECRET: str = os.getenv("JWT_SECRET", "dev_jwt_secret_key_placeholder")
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 Days
-    ENCRYPTION_KEY: str = "supersecretfernetkey123456789012"  # Fernet key
+    ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", "dev_encryption_key_placeholder")
 
     # Allowlists & Security Rules
     ALLOWED_SENDER_DOMAINS: str = "example.com,greenarrow.internal,arrowmail.internal,gmail.com"
